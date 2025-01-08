@@ -5,7 +5,7 @@ import '../../../core/constants/text_styles.dart';
 enum ButtonType { primary, secondary }
 
 class CustomButton extends StatelessWidget {
-  final VoidCallback onPressed;
+  final Function()? onPressed;
   final String text;
   final ButtonType type;
   final bool isLoading;
