@@ -232,10 +232,29 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 _emailController.text,
                 _passwordController.text,
                 _selectedUserType,
+                fullName: _fullNameController.text,
               );
-          // TODO: Navigate to appropriate dashboard
+
+          if (mounted) {
+            // Navigate and remove all previous routes
+            Navigator.of(context).pushNamedAndRemoveUntil(
+              _selectedUserType == UserType.homeowner
+                  ? '/homeowner/dashboard'
+                  : '/electrician/dashboard',
+              (route) => false,
+            );
+          }
+        } catch (e) {
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text('Registration failed: ${e.toString()}'),
+                backgroundColor: Colors.red,
+              ),
+            );
+          }
         } finally {
-          setState(() => _isLoading = false);
+          if (mounted) setState(() => _isLoading = false);
         }
       }
     }
