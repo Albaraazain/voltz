@@ -24,7 +24,7 @@ class NotificationItem extends StatelessWidget {
         decoration: BoxDecoration(
           color: notification.isRead
               ? AppColors.surface
-              : AppColors.primary.withOpacity(0.1),
+              : AppColors.primary.withValues(alpha: 26),
           borderRadius: BorderRadius.circular(12),
           border: Border.all(color: AppColors.border),
         ),
@@ -76,40 +76,34 @@ class NotificationItem extends StatelessWidget {
   }
 
   Widget _buildNotificationIcon() {
-    IconData iconData;
-    Color iconColor;
+    late final IconData iconData;
+    late final Color iconColor;
 
     switch (notification.type) {
-      case NotificationType.newJob:
+      case NotificationType.jobRequest:
         iconData = Icons.work;
         iconColor = Colors.blue;
-        break;
       case NotificationType.jobAccepted:
         iconData = Icons.check_circle;
         iconColor = Colors.green;
-        break;
+      case NotificationType.jobRejected:
+        iconData = Icons.cancel;
+        iconColor = Colors.red;
       case NotificationType.jobCompleted:
         iconData = Icons.task_alt;
         iconColor = Colors.purple;
-        break;
       case NotificationType.message:
         iconData = Icons.message;
         iconColor = Colors.orange;
-        break;
-      case NotificationType.payment:
-        iconData = Icons.payment;
-        iconColor = Colors.green;
-        break;
       case NotificationType.review:
         iconData = Icons.star;
         iconColor = Colors.amber;
-        break;
     }
 
     return Container(
       padding: const EdgeInsets.all(8),
       decoration: BoxDecoration(
-        color: iconColor.withOpacity(0.1),
+        color: iconColor.withValues(alpha: 26),
         borderRadius: BorderRadius.circular(8),
       ),
       child: Icon(
