@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import '../../../core/constants/colors.dart';
 
 class RatingBar extends StatelessWidget {
   final double rating;
@@ -23,9 +22,7 @@ class RatingBar extends StatelessWidget {
           child: Container(
             padding: const EdgeInsets.all(4),
             child: Icon(
-              index < rating
-                  ? Icons.star
-                  : Icons.star_border,
+              index < rating ? Icons.star : Icons.star_border,
               color: Colors.amber,
               size: size,
             ),
