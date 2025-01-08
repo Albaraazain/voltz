@@ -122,11 +122,11 @@ class _SearchScreenState extends State<SearchScreen> {
                     padding: const EdgeInsets.only(bottom: 16),
                     child: ElectricianCard(
                       name: 'John Smith',
-                      rating: '4.9',
+                      rating: 4.9,
+                      specialty: 'Residential & Commercial',
+                      price: '\$50-100/hr',
                       distance: '2.5 km away',
-                      onTap: () {
-                        // Handle tap
-                      },
+                      availability: 'Available Today',
                     ),
                   );
                 },
