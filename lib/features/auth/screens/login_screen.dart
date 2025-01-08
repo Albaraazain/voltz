@@ -108,6 +108,8 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   Future<void> _handleLogin() async {
+    if (!_validateInputs()) return;
+
     setState(() => _isLoading = true);
     try {
       await context.read<AuthProvider>().signIn(
@@ -115,10 +117,44 @@ class _LoginScreenState extends State<LoginScreen> {
             _passwordController.text,
             _selectedUserType,
           );
-      // TODO: Navigate to appropriate dashboard
+
+      if (mounted) {
+        // Navigate and remove all previous routes
+        Navigator.of(context).pushNamedAndRemoveUntil(
+          _selectedUserType == UserType.homeowner
+              ? '/homeowner/dashboard'
+              : '/electrician/dashboard',
+          (route) => false,
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Login failed: ${e.toString()}'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
     } finally {
-      setState(() => _isLoading = false);
+      if (mounted) setState(() => _isLoading = false);
     }
+  }
+
+  bool _validateInputs() {
+    if (_emailController.text.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please enter your email')),
+      );
+      return false;
+    }
+    if (_passwordController.text.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please enter your password')),
+      );
+      return false;
+    }
+    return true;
   }
 }
 
