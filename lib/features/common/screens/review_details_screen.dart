@@ -75,9 +75,8 @@ class ReviewDetailsScreen extends StatelessWidget {
                   return Icon(
                     Icons.star,
                     size: 24,
-                    color: index < review.rating
-                        ? Colors.amber
-                        : AppColors.border,
+                    color:
+                        index < review.rating ? Colors.amber : AppColors.border,
                   );
                 }),
                 const SizedBox(width: 16),
