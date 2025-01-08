@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../../core/constants/colors.dart';
 import '../../../core/constants/text_styles.dart';
+import '../../../models/notification_model.dart';
 import '../../../providers/notification_provider.dart';
 import '../widgets/notification_item.dart';
 
@@ -80,20 +81,20 @@ class NotificationsScreen extends StatelessWidget {
     NotificationModel notification,
   ) {
     switch (notification.type) {
-      case NotificationType.newJob:
-        // Navigate to job details
+      case NotificationType.jobRequest:
+        // Navigate to job request details
         break;
       case NotificationType.jobAccepted:
         // Navigate to active job
+        break;
+      case NotificationType.jobRejected:
+        // Navigate to rejected job details
         break;
       case NotificationType.jobCompleted:
         // Navigate to completed job
         break;
       case NotificationType.message:
         // Navigate to chat
-        break;
-      case NotificationType.payment:
-        // Navigate to payment details
         break;
       case NotificationType.review:
         // Navigate to reviews
