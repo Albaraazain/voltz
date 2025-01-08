@@ -12,13 +12,14 @@ class RatingDistribution extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final total = distribution.values.fold(0, (sum, count) => sum + count);
+    final maxCount = distribution.values
+        .fold<int>(0, (max, count) => count > max ? count : max);
 
     return Column(
       children: List.generate(5, (index) {
         final rating = 5 - index;
         final count = distribution[rating] ?? 0;
-        final percentage = total > 0 ? (count / total) * 100 : 0.0;
+        final percentage = maxCount > 0 ? count / maxCount : 0.0;
 
         return Padding(
           padding: const EdgeInsets.only(bottom: 8),
@@ -32,7 +33,7 @@ class RatingDistribution extends StatelessWidget {
                 ),
               ),
               const SizedBox(width: 8),
-              const Icon(
+              Icon(
                 Icons.star,
                 size: 16,
                 color: Colors.amber,
@@ -42,23 +43,21 @@ class RatingDistribution extends StatelessWidget {
                 child: ClipRRect(
                   borderRadius: BorderRadius.circular(4),
                   child: LinearProgressIndicator(
-                    value: percentage / 100,
+                    value: percentage,
                     backgroundColor: AppColors.border,
-                    valueColor: const AlwaysStoppedAnimation<Color>(
-                      AppColors.accent,
-                    ),
+                    valueColor:
+                        const AlwaysStoppedAnimation<Color>(Colors.amber),
                     minHeight: 8,
                   ),
                 ),
               ),
               const SizedBox(width: 8),
               SizedBox(
-                width: 40,
+                width: 32,
                 child: Text(
-                  '($count)',
-                  style: AppTextStyles.bodySmall.copyWith(
-                    color: AppColors.textSecondary,
-                  ),
+                  count.toString(),
+                  style: AppTextStyles.bodySmall,
+                  textAlign: TextAlign.end,
                 ),
               ),
             ],
