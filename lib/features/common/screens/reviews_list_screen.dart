@@ -5,6 +5,7 @@ import '../../../core/constants/text_styles.dart';
 import '../../../providers/review_provider.dart';
 import '../widgets/rating_distribution.dart';
 import '../widgets/review_list_item.dart';
+import 'review_details_screen.dart';
 
 class ReviewsListScreen extends StatelessWidget {
   final String electricianId;
