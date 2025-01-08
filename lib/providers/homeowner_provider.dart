@@ -2,8 +2,8 @@ import 'package:flutter/material.dart';
 
 class HomeownerProvider extends ChangeNotifier {
   // Mock data for now
-  List<String> _savedElectricians = [];
-  List<String> _activeJobs = [];
+  final List<String> _savedElectricians = [];
+  final List<String> _activeJobs = [];
 
   List<String> get savedElectricians => _savedElectricians;
   List<String> get activeJobs => _activeJobs;
