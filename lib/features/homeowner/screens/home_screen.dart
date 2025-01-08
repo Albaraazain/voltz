@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
-import '../../core/constants/colors.dart';
-import '../../core/constants/text_styles.dart';
-import 'widgets/recent_electrician_card.dart';
-import 'widgets/job_status_card.dart';
+import 'package:voltz/core/constants/colors.dart';
+import 'package:voltz/core/constants/text_styles.dart';
+import 'package:voltz/features/homeowner/widgets/job_status_card.dart';
+import 'package:voltz/features/homeowner/widgets/recent_electrician_card.dart';
 
 class HomeownerHomeScreen extends StatelessWidget {
   const HomeownerHomeScreen({super.key});
