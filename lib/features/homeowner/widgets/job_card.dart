@@ -49,40 +49,55 @@ class JobCard extends StatelessWidget {
                     color: AppColors.accent,
                   ),
                 ),
-                const SizedBox(width: 16),
+                const SizedBox(width: 12),
                 // Job Details
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(
-                        jobTitle,
-                        style: AppTextStyles.h3,
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        'by $electricianName',
-                        style: AppTextStyles.bodySmall,
-                      ),
-                      const SizedBox(height: 8),
                       Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  jobTitle,
+                                  style: AppTextStyles.h3,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                                const SizedBox(height: 4),
+                                Text(
+                                  'by $electricianName',
+                                  style: AppTextStyles.bodySmall,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Text(
+                            amount,
+                            style: AppTextStyles.h3.copyWith(
+                              color: AppColors.accent,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 12),
+                      Wrap(
+                        spacing: 8,
+                        runSpacing: 8,
                         children: [
                           _InfoChip(
                             icon: Icons.calendar_today_outlined,
                             label: date,
                           ),
-                          const SizedBox(width: 8),
                           _StatusChip(status: status),
                         ],
                       ),
                     ],
-                  ),
-                ),
-                // Amount
-                Text(
-                  amount,
-                  style: AppTextStyles.h3.copyWith(
-                    color: AppColors.accent,
                   ),
                 ),
               ],
@@ -195,9 +210,12 @@ class _InfoChip extends StatelessWidget {
             color: AppColors.textSecondary,
           ),
           const SizedBox(width: 4),
-          Text(
-            label,
-            style: AppTextStyles.caption,
+          Flexible(
+            child: Text(
+              label,
+              style: AppTextStyles.caption,
+              overflow: TextOverflow.ellipsis,
+            ),
           ),
         ],
       ),
@@ -224,6 +242,7 @@ class _StatusChip extends StatelessWidget {
           color: AppColors.accent,
           fontWeight: FontWeight.w600,
         ),
+        overflow: TextOverflow.ellipsis,
       ),
     );
   }
