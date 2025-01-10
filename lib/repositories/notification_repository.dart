@@ -1,124 +1,63 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
-import '../core/repositories/base_repository.dart';
 import '../core/utils/api_response.dart';
 import '../models/notification_model.dart';
 
-class NotificationRepository extends BaseRepository<NotificationModel> {
-  NotificationRepository(SupabaseClient supabase)
-      : super(supabase, 'notifications');
+class NotificationRepository {
+  final SupabaseClient _client;
 
-  @override
-  NotificationModel fromJson(Map<String, dynamic> json) =>
-      NotificationModel.fromJson(json);
+  NotificationRepository(this._client);
 
-  @override
-  Map<String, dynamic> toJson(NotificationModel entity) => entity.toJson();
-
-  /// Get unread notifications for a user
-  Future<ApiResponse<List<NotificationModel>>> getUnreadNotifications(
-    String profileId,
-  ) async {
-    return list(
-      filters: {
-        'profile_id': profileId,
-        'is_read': false,
-      },
-      orderBy: 'created_at',
-      ascending: false,
-    );
-  }
-
-  /// Get all notifications for a user with pagination
   Future<ApiResponse<List<NotificationModel>>> getUserNotifications(
-    String profileId, {
+    String userId, {
     int? limit,
     int? offset,
   }) async {
-    return list(
-      filters: {'profile_id': profileId},
-      orderBy: 'created_at',
-      ascending: false,
-      limit: limit,
-      offset: offset,
-    );
-  }
-
-  /// Mark a notification as read
-  Future<ApiResponse<NotificationModel>> markAsRead(
-      String notificationId) async {
-    return customMutation((client) async {
-      final response = await client
-          .from(table)
-          .update({'is_read': true})
-          .eq('id', notificationId)
-          .select()
-          .single();
-      return response;
-    });
-  }
-
-  /// Mark all notifications as read for a user
-  Future<ApiResponse<bool>> markAllAsRead(String profileId) async {
     try {
-      await supabase
-          .from(table)
-          .update({'is_read': true})
-          .eq('profile_id', profileId)
-          .eq('is_read', false);
-      return ApiResponse.success(true);
+      final response = await _client
+          .from('notifications')
+          .select()
+          .eq('user_id', userId)
+          .order('created_at', ascending: false)
+          .limit(limit ?? 20)
+          .range(offset ?? 0, (offset ?? 0) + (limit ?? 20) - 1);
+
+      final notifications = (response as List)
+          .map((data) => NotificationModel.fromMap(data))
+          .toList();
+
+      return ApiResponse.success(notifications);
     } catch (error, stackTrace) {
       return ApiResponse.error(error, stackTrace);
     }
   }
 
-  /// Get notifications by type
-  Future<ApiResponse<List<NotificationModel>>> getNotificationsByType(
-    String profileId,
-    NotificationType type,
+  Future<ApiResponse<List<NotificationModel>>> getUnreadNotifications(
+    String userId,
   ) async {
-    return list(
-      filters: {
-        'profile_id': profileId,
-        'type': type.toString().split('.').last,
-      },
-      orderBy: 'created_at',
-      ascending: false,
-    );
-  }
-
-  /// Get notifications related to a specific entity
-  Future<ApiResponse<List<NotificationModel>>> getRelatedNotifications(
-    String profileId,
-    String relatedId,
-  ) async {
-    return list(
-      filters: {
-        'profile_id': profileId,
-        'related_id': relatedId,
-      },
-      orderBy: 'created_at',
-      ascending: false,
-    );
-  }
-
-  /// Stream new notifications for a user
-  Stream<ApiResponse<List<NotificationModel>>> streamUserNotifications(
-    String profileId,
-  ) {
-    return stream(
-      filters: {'profile_id': profileId},
-      orderBy: 'created_at',
-      ascending: false,
-    );
-  }
-
-  /// Get unread notification count for a user
-  Future<ApiResponse<int>> getUnreadCount(String profileId) async {
     try {
-      final response = await supabase
-          .from(table)
+      final response = await _client
+          .from('notifications')
           .select()
-          .eq('profile_id', profileId)
+          .eq('user_id', userId)
+          .eq('is_read', false)
+          .order('created_at', ascending: false);
+
+      final notifications = (response as List)
+          .map((data) => NotificationModel.fromMap(data))
+          .toList();
+
+      return ApiResponse.success(notifications);
+    } catch (error, stackTrace) {
+      return ApiResponse.error(error, stackTrace);
+    }
+  }
+
+  Future<ApiResponse<int>> getUnreadCount(String userId) async {
+    try {
+      final response = await _client
+          .from('notifications')
+          .select('id')
+          .eq('user_id', userId)
           .eq('is_read', false);
 
       return ApiResponse.success((response as List).length);
@@ -127,20 +66,117 @@ class NotificationRepository extends BaseRepository<NotificationModel> {
     }
   }
 
-  /// Delete old notifications for a user
-  Future<ApiResponse<bool>> deleteOldNotifications(
-    String profileId, {
+  Future<ApiResponse<NotificationModel>> markAsRead(
+      String notificationId) async {
+    try {
+      final response = await _client
+          .from('notifications')
+          .update({'is_read': true})
+          .eq('id', notificationId)
+          .select()
+          .single();
+
+      return ApiResponse.success(NotificationModel.fromMap(response));
+    } catch (error, stackTrace) {
+      return ApiResponse.error(error, stackTrace);
+    }
+  }
+
+  Future<ApiResponse<List<NotificationModel>>> markAllAsRead(
+      String userId) async {
+    try {
+      final response = await _client
+          .from('notifications')
+          .update({'is_read': true})
+          .eq('user_id', userId)
+          .select();
+
+      final notifications = (response as List)
+          .map((data) => NotificationModel.fromMap(data))
+          .toList();
+
+      return ApiResponse.success(notifications);
+    } catch (error, stackTrace) {
+      return ApiResponse.error(error, stackTrace);
+    }
+  }
+
+  Future<ApiResponse<List<NotificationModel>>> getNotificationsByType(
+    String userId,
+    NotificationType type,
+  ) async {
+    try {
+      final response = await _client
+          .from('notifications')
+          .select()
+          .eq('user_id', userId)
+          .eq('type', type.toString().split('.').last)
+          .order('created_at', ascending: false);
+
+      final notifications = (response as List)
+          .map((data) => NotificationModel.fromMap(data))
+          .toList();
+
+      return ApiResponse.success(notifications);
+    } catch (error, stackTrace) {
+      return ApiResponse.error(error, stackTrace);
+    }
+  }
+
+  Future<ApiResponse<List<NotificationModel>>> getRelatedNotifications(
+    String userId,
+    String relatedId,
+  ) async {
+    try {
+      final response = await _client
+          .from('notifications')
+          .select()
+          .eq('user_id', userId)
+          .eq('related_id', relatedId)
+          .order('created_at', ascending: false);
+
+      final notifications = (response as List)
+          .map((data) => NotificationModel.fromMap(data))
+          .toList();
+
+      return ApiResponse.success(notifications);
+    } catch (error, stackTrace) {
+      return ApiResponse.error(error, stackTrace);
+    }
+  }
+
+  Stream<ApiResponse<List<NotificationModel>>> streamUserNotifications(
+    String userId,
+  ) {
+    return _client
+        .from('notifications')
+        .stream(primaryKey: ['id'])
+        .eq('user_id', userId)
+        .order('created_at')
+        .map((data) {
+          try {
+            final notifications =
+                data.map((row) => NotificationModel.fromMap(row));
+            return ApiResponse.success(notifications.toList());
+          } catch (error, stackTrace) {
+            return ApiResponse.error(error, stackTrace);
+          }
+        });
+  }
+
+  Future<ApiResponse<void>> deleteOldNotifications(
+    String userId, {
     Duration age = const Duration(days: 30),
   }) async {
     try {
       final cutoffDate = DateTime.now().subtract(age);
-      await supabase
-          .from(table)
+      await _client
+          .from('notifications')
           .delete()
-          .eq('profile_id', profileId)
+          .eq('user_id', userId)
           .lt('created_at', cutoffDate.toIso8601String());
 
-      return ApiResponse.success(true);
+      return ApiResponse.success(null);
     } catch (error, stackTrace) {
       return ApiResponse.error(error, stackTrace);
     }
