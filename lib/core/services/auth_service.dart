@@ -34,17 +34,14 @@ class AuthService {
       final response = await _client.auth.signUp(
         email: email,
         password: password,
+        data: {
+          'name': name,
+          'is_electrician': isElectrician,
+        },
       );
 
-      if (response.user != null) {
-        await _client
-            .from(isElectrician ? 'electricians' : 'homeowners')
-            .upsert({
-          'id': response.user!.id,
-          'email': email,
-          'name': name,
-          'created_at': DateTime.now().toIso8601String(),
-        });
+      if (response.user == null) {
+        throw Exception('Failed to create user');
       }
 
       return response;
@@ -68,7 +65,7 @@ class AuthService {
       final electrician = await _client
           .from('electricians')
           .select()
-          .eq('id', userId)
+          .eq('profile_id', userId)
           .single()
           .maybeSingle();
 
@@ -82,7 +79,7 @@ class AuthService {
       final homeowner = await _client
           .from('homeowners')
           .select()
-          .eq('id', userId)
+          .eq('profile_id', userId)
           .single()
           .maybeSingle();
 
