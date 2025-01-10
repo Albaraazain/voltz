@@ -1,17 +1,17 @@
 import 'package:flutter/material.dart';
+import 'package:timeago/timeago.dart' as timeago;
 import '../../../core/constants/colors.dart';
 import '../../../core/constants/text_styles.dart';
 import '../../../models/review_model.dart';
-import 'package:timeago/timeago.dart' as timeago;
 
 class ReviewListItem extends StatelessWidget {
   final ReviewModel review;
-  final VoidCallback onTap;
+  final VoidCallback? onTap;
 
   const ReviewListItem({
     super.key,
     required this.review,
-    required this.onTap,
+    this.onTap,
   });
 
   @override
@@ -22,19 +22,26 @@ class ReviewListItem extends StatelessWidget {
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
           color: AppColors.surface,
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(
+            color: AppColors.border,
+            width: 1,
+          ),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Row(
               children: [
-                const CircleAvatar(
+                CircleAvatar(
                   radius: 20,
-                  backgroundColor: AppColors.primary,
-                  child: Icon(
-                    Icons.person,
-                    color: AppColors.accent,
+                  backgroundColor: AppColors.primary.withOpacity(0.1),
+                  child: Text(
+                    review.userName.substring(0, 1).toUpperCase(),
+                    style: AppTextStyles.bodyMedium.copyWith(
+                      color: AppColors.primary,
+                      fontWeight: FontWeight.w600,
+                    ),
                   ),
                 ),
                 const SizedBox(width: 12),
@@ -44,36 +51,67 @@ class ReviewListItem extends StatelessWidget {
                     children: [
                       Text(
                         review.userName,
-                        style: AppTextStyles.bodyLarge,
+                        style: AppTextStyles.bodyMedium.copyWith(
+                          fontWeight: FontWeight.w600,
+                        ),
                       ),
-                      const SizedBox(height: 4),
-                      Row(
-                        children: List.generate(5, (index) {
-                          return Icon(
-                            Icons.star,
-                            size: 16,
-                            color: index < review.rating
-                                ? Colors.amber
-                                : AppColors.border,
-                          );
-                        }),
+                      Text(
+                        timeago.format(review.timestamp),
+                        style: AppTextStyles.bodySmall.copyWith(
+                          color: AppColors.textSecondary,
+                        ),
                       ),
                     ],
                   ),
                 ),
-                Text(
-                  timeago.format(review.timestamp),
-                  style: AppTextStyles.bodySmall,
+                Row(
+                  children: [
+                    Icon(
+                      Icons.star,
+                      color: AppColors.warning,
+                      size: 20,
+                    ),
+                    const SizedBox(width: 4),
+                    Text(
+                      review.rating.toString(),
+                      style: AppTextStyles.bodyMedium.copyWith(
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ],
                 ),
               ],
             ),
-            if (review.comment.isNotEmpty) ...[
+            if (review.comment?.isNotEmpty ?? false) ...[
               const SizedBox(height: 12),
               Text(
-                review.comment,
+                review.comment!,
                 style: AppTextStyles.bodyMedium,
                 maxLines: 3,
                 overflow: TextOverflow.ellipsis,
+              ),
+            ],
+            if (review.photos?.isNotEmpty ?? false) ...[
+              const SizedBox(height: 12),
+              SizedBox(
+                height: 80,
+                child: ListView.separated(
+                  scrollDirection: Axis.horizontal,
+                  itemCount: review.photos!.length,
+                  separatorBuilder: (context, index) =>
+                      const SizedBox(width: 8),
+                  itemBuilder: (context, index) {
+                    return ClipRRect(
+                      borderRadius: BorderRadius.circular(8),
+                      child: Image.network(
+                        review.photos![index],
+                        width: 80,
+                        height: 80,
+                        fit: BoxFit.cover,
+                      ),
+                    );
+                  },
+                ),
               ),
             ],
           ],
