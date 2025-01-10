@@ -1,66 +1,74 @@
 import 'package:flutter/material.dart';
-import '../../../core/constants/colors.dart';
-import '../../../core/constants/text_styles.dart';
-
-enum ButtonType { primary, secondary }
+import '../../../core/theme/app_colors.dart';
+import '../../../core/theme/app_text_styles.dart';
 
 class CustomButton extends StatelessWidget {
-  final Function()? onPressed;
+  final VoidCallback? onPressed;
   final String text;
-  final ButtonType type;
-  final bool isLoading;
+  final bool isOutlined;
+  final bool isFullWidth;
+  final double? width;
+  final double height;
+  final Color? backgroundColor;
+  final Color? textColor;
 
   const CustomButton({
-    super.key,
+    Key? key,
     required this.onPressed,
     required this.text,
-    this.type = ButtonType.primary,
-    this.isLoading = false,
-  });
+    this.isOutlined = false,
+    this.isFullWidth = true,
+    this.width,
+    this.height = 48,
+    this.backgroundColor,
+    this.textColor,
+  }) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        onTap: isLoading ? null : onPressed,
-        borderRadius: BorderRadius.circular(12),
-        child: Ink(
-          height: 56,
-          decoration: BoxDecoration(
-            color: type == ButtonType.primary
-                ? AppColors.accent
-                : Colors.transparent,
-            border: type == ButtonType.secondary
-                ? Border.all(color: AppColors.accent)
-                : null,
-            borderRadius: BorderRadius.circular(12),
-          ),
-          child: Center(
-            child: isLoading
-                ? SizedBox(
-                    width: 24,
-                    height: 24,
-                    child: CircularProgressIndicator(
-                      valueColor: AlwaysStoppedAnimation<Color>(
-                        type == ButtonType.primary
-                            ? AppColors.surface
-                            : AppColors.accent,
-                      ),
-                      strokeWidth: 2,
-                    ),
-                  )
-                : Text(
-                    text,
-                    style: AppTextStyles.buttonLarge.copyWith(
-                      color: type == ButtonType.primary
-                          ? AppColors.surface
-                          : AppColors.accent,
-                    ),
-                  ),
-          ),
-        ),
+    final buttonStyle = isOutlined
+        ? OutlinedButton.styleFrom(
+            foregroundColor: textColor ?? AppColors.primary,
+            side: BorderSide(
+              color: onPressed == null
+                  ? AppColors.border
+                  : (backgroundColor ?? AppColors.primary),
+            ),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(8),
+            ),
+            minimumSize:
+                Size(isFullWidth ? double.infinity : (width ?? 0), height),
+          )
+        : ElevatedButton.styleFrom(
+            backgroundColor: backgroundColor ?? AppColors.primary,
+            foregroundColor: textColor ?? AppColors.onPrimary,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(8),
+            ),
+            minimumSize:
+                Size(isFullWidth ? double.infinity : (width ?? 0), height),
+          );
+
+    final buttonChild = Text(
+      text,
+      style: AppTextStyles.buttonMedium.copyWith(
+        color: isOutlined
+            ? (textColor ?? AppColors.primary)
+            : (textColor ?? AppColors.onPrimary),
       ),
     );
+
+    return isOutlined
+        ? OutlinedButton(
+            onPressed: onPressed,
+            style: buttonStyle,
+            child: buttonChild,
+          )
+        : ElevatedButton(
+            onPressed: onPressed,
+            style: buttonStyle,
+            child: buttonChild,
+          );
   }
 }
