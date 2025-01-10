@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import '../../../core/constants/colors.dart';
 import '../../../core/constants/text_styles.dart';
+import '../../../providers/job_provider.dart';
+import '../../../providers/auth_provider.dart';
 import '../widgets/job_card.dart';
 
 class JobsScreen extends StatefulWidget {
@@ -10,19 +13,41 @@ class JobsScreen extends StatefulWidget {
   State<JobsScreen> createState() => _JobsScreenState();
 }
 
-class _JobsScreenState extends State<JobsScreen> with SingleTickerProviderStateMixin {
+class _JobsScreenState extends State<JobsScreen>
+    with SingleTickerProviderStateMixin {
   late TabController _tabController;
 
   @override
   void initState() {
     super.initState();
     _tabController = TabController(length: 3, vsync: this);
+
+    // Load jobs when screen initializes
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final homeownerId = context.read<AuthProvider>().userId;
+      if (homeownerId != null) {
+        context.read<JobProvider>().loadJobs(homeownerId);
+      }
+    });
   }
 
   @override
   void dispose() {
     _tabController.dispose();
     super.dispose();
+  }
+
+  String _getStatusForTab(int tabIndex) {
+    switch (tabIndex) {
+      case 0:
+        return 'active';
+      case 1:
+        return 'scheduled';
+      case 2:
+        return 'completed';
+      default:
+        return '';
+    }
   }
 
   @override
@@ -49,35 +74,96 @@ class _JobsScreenState extends State<JobsScreen> with SingleTickerProviderStateM
           ],
         ),
       ),
-      body: TabBarView(
-        controller: _tabController,
-        children: [
-          _buildJobsList('active'),
-          _buildJobsList('scheduled'),
-          _buildJobsList('completed'),
-        ],
-      ),
-    );
-  }
+      body: Consumer<JobProvider>(
+        builder: (context, jobProvider, child) {
+          if (jobProvider.isLoading) {
+            return const Center(
+              child: CircularProgressIndicator(
+                valueColor: AlwaysStoppedAnimation<Color>(AppColors.accent),
+              ),
+            );
+          }
 
-  Widget _buildJobsList(String type) {
-    return ListView.builder(
-      padding: const EdgeInsets.all(24),
-      itemCount: 5, // Mock data count
-      itemBuilder: (context, index) {
-        return Padding(
-          padding: const EdgeInsets.only(bottom: 16),
-          child: JobCard(
-            jobType: type,
-            jobTitle: 'Electrical Repair',
-            electricianName: 'Mike Johnson',
-            date: 'Today, 2:30 PM',
-            status: type == 'active' ? 'In Progress' :
-                    type == 'scheduled' ? 'Scheduled' : 'Completed',
-            amount: '\$150',
-          ),
-        );
-      },
+          if (jobProvider.error != null) {
+            return Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Icon(
+                    Icons.error_outline,
+                    color: Colors.red,
+                    size: 48,
+                  ),
+                  const SizedBox(height: 16),
+                  Text(
+                    'Failed to load jobs',
+                    style: AppTextStyles.bodyLarge,
+                  ),
+                  TextButton(
+                    onPressed: () {
+                      final homeownerId = context.read<AuthProvider>().userId;
+                      if (homeownerId != null) {
+                        jobProvider.loadJobs(homeownerId);
+                      }
+                    },
+                    child: const Text('Retry'),
+                  ),
+                ],
+              ),
+            );
+          }
+
+          return TabBarView(
+            controller: _tabController,
+            children: [0, 1, 2].map((tabIndex) {
+              final status = _getStatusForTab(tabIndex);
+              final jobs = jobProvider.getJobsByStatus(status);
+
+              if (jobs.isEmpty) {
+                return Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(
+                        Icons.work_outline,
+                        size: 64,
+                        color: AppColors.textSecondary,
+                      ),
+                      const SizedBox(height: 16),
+                      Text(
+                        'No ${status.toLowerCase()} jobs',
+                        style: AppTextStyles.bodyLarge.copyWith(
+                          color: AppColors.textSecondary,
+                        ),
+                      ),
+                    ],
+                  ),
+                );
+              }
+
+              return ListView.builder(
+                padding: const EdgeInsets.all(24),
+                itemCount: jobs.length,
+                itemBuilder: (context, index) {
+                  final job = jobs[index];
+                  return Padding(
+                    padding: const EdgeInsets.only(bottom: 16),
+                    child: JobCard(
+                      jobType: status,
+                      jobTitle: job.title,
+                      electricianName:
+                          'Mike Johnson', // TODO: Get from electrician
+                      date: job.date.toString(), // TODO: Format date
+                      status: job.status,
+                      amount: '\$${job.price.toStringAsFixed(2)}',
+                    ),
+                  );
+                },
+              );
+            }).toList(),
+          );
+        },
+      ),
     );
   }
 }
