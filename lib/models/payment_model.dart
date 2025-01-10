@@ -60,3 +60,14 @@ class PaymentMethodModel {
     this.isDefault = false,
   });
 }
+
+// TODO: Implement split payment support
+// TODO: Add multiple currency support
+// TODO: Implement automatic recurring payments
+// TODO: Add payment dispute handling
+// TODO: Implement partial refund functionality
+// TODO: Add invoice generation system
+// TODO: Implement service fee calculation
+// TODO: Add tax calculation and reporting
+// TODO: Implement payment gateway integration (Stripe, PayPal)
+// TODO: Add payment analytics and reporting
