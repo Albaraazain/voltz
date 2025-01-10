@@ -127,13 +127,35 @@ class _SearchScreenState extends State<SearchScreen> {
             Expanded(
               child: Consumer<DatabaseProvider>(
                 builder: (context, databaseProvider, child) {
-                  final electricians = databaseProvider.electricians;
-
-                  if (electricians.isEmpty) {
+                  if (databaseProvider.isLoading) {
                     return const Center(
                       child: CircularProgressIndicator(
                         valueColor:
                             AlwaysStoppedAnimation<Color>(AppColors.accent),
+                      ),
+                    );
+                  }
+
+                  final electricians = databaseProvider.electricians;
+
+                  if (electricians.isEmpty) {
+                    return Center(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          const Icon(
+                            Icons.search_off_rounded,
+                            size: 48,
+                            color: AppColors.textSecondary,
+                          ),
+                          const SizedBox(height: 16),
+                          Text(
+                            'No electricians found',
+                            style: AppTextStyles.bodyLarge.copyWith(
+                              color: AppColors.textSecondary,
+                            ),
+                          ),
+                        ],
                       ),
                     );
                   }
@@ -146,10 +168,11 @@ class _SearchScreenState extends State<SearchScreen> {
                       return Padding(
                         padding: const EdgeInsets.only(bottom: 16),
                         child: ElectricianCard(
-                          name: electrician.name,
+                          name: electrician.profile.name,
                           rating: electrician.rating,
-                          specialty:
-                              'Residential & Commercial', // TODO: Add to model
+                          specialty: electrician.specialties.isNotEmpty
+                              ? '${electrician.specialties.join(" & ")}'
+                              : 'General Electrician',
                           price:
                               '\$${electrician.hourlyRate.toStringAsFixed(0)}/hr',
                           distance:
