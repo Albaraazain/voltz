@@ -3,16 +3,13 @@ import 'package:timeago/timeago.dart' as timeago;
 import '../../../core/constants/colors.dart';
 import '../../../core/constants/text_styles.dart';
 import '../../../models/review_model.dart';
-import '../widgets/photo_gallery.dart';
 
 class ReviewDetailsScreen extends StatelessWidget {
   final ReviewModel review;
-  final String electricianName;
 
   const ReviewDetailsScreen({
     super.key,
     required this.review,
-    required this.electricianName,
   });
 
   @override
@@ -21,108 +18,130 @@ class ReviewDetailsScreen extends StatelessWidget {
       backgroundColor: AppColors.background,
       appBar: AppBar(
         backgroundColor: AppColors.surface,
-        title: Text(
-          'Review Details',
-          style: AppTextStyles.h2,
-        ),
+        elevation: 0,
+        title: Text('Review Details', style: AppTextStyles.h2),
       ),
       body: SingleChildScrollView(
-        padding: const EdgeInsets.all(24),
+        padding: const EdgeInsets.all(16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // User Info
             Row(
               children: [
-                Container(
-                  width: 48,
-                  height: 48,
-                  decoration: BoxDecoration(
-                    color: AppColors.primary,
-                    shape: BoxShape.circle,
-                  ),
-                  child: const Icon(
-                    Icons.person,
-                    color: AppColors.accent,
+                CircleAvatar(
+                  radius: 24,
+                  backgroundColor: AppColors.primary.withOpacity(0.1),
+                  child: Text(
+                    review.userName.substring(0, 1).toUpperCase(),
+                    style: AppTextStyles.bodyLarge.copyWith(
+                      color: AppColors.primary,
+                      fontWeight: FontWeight.w600,
+                    ),
                   ),
                 ),
                 const SizedBox(width: 16),
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        review.userName,
+                        style: AppTextStyles.bodyLarge.copyWith(
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      Text(
+                        timeago.format(review.timestamp),
+                        style: AppTextStyles.bodySmall.copyWith(
+                          color: AppColors.textSecondary,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                Row(
                   children: [
+                    Icon(
+                      Icons.star,
+                      color: AppColors.warning,
+                      size: 24,
+                    ),
+                    const SizedBox(width: 4),
                     Text(
-                      review.userName,
+                      review.rating.toString(),
                       style: AppTextStyles.bodyLarge.copyWith(
                         fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                    Text(
-                      timeago.format(review.timestamp),
-                      style: AppTextStyles.bodySmall.copyWith(
-                        color: AppColors.textSecondary,
                       ),
                     ),
                   ],
                 ),
               ],
             ),
-            const SizedBox(height: 24),
-
-            // Rating
-            Row(
-              children: [
-                ...List.generate(5, (index) {
-                  return Icon(
-                    Icons.star,
-                    size: 24,
-                    color:
-                        index < review.rating ? Colors.amber : AppColors.border,
-                  );
-                }),
-                const SizedBox(width: 16),
-                Text(
-                  review.rating.toString(),
-                  style: AppTextStyles.h3,
+            if (review.comment?.isNotEmpty ?? false) ...[
+              const SizedBox(height: 24),
+              Text(
+                'Comment',
+                style: AppTextStyles.bodyMedium.copyWith(
+                  fontWeight: FontWeight.w600,
                 ),
-              ],
-            ),
-            const SizedBox(height: 24),
-
-            // Review Text
-            Text(
-              review.comment,
-              style: AppTextStyles.bodyLarge,
-            ),
-            if (review.photos != null && review.photos!.isNotEmpty) ...[
-              const SizedBox(height: 24),
-              PhotoGallery(photos: review.photos!),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                review.comment!,
+                style: AppTextStyles.bodyMedium,
+              ),
             ],
-
-            // Electrician Reply
-            if (review.electricianReply != null) ...[
+            if (review.photos?.isNotEmpty ?? false) ...[
               const SizedBox(height: 24),
+              Text(
+                'Photos',
+                style: AppTextStyles.bodyMedium.copyWith(
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              const SizedBox(height: 8),
+              GridView.builder(
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                  crossAxisCount: 3,
+                  crossAxisSpacing: 8,
+                  mainAxisSpacing: 8,
+                ),
+                itemCount: review.photos!.length,
+                itemBuilder: (context, index) {
+                  return ClipRRect(
+                    borderRadius: BorderRadius.circular(8),
+                    child: Image.network(
+                      review.photos![index],
+                      fit: BoxFit.cover,
+                    ),
+                  );
+                },
+              ),
+            ],
+            if (review.electricianReply?.isNotEmpty ?? false) ...[
+              const SizedBox(height: 24),
+              Text(
+                'Electrician\'s Reply',
+                style: AppTextStyles.bodyMedium.copyWith(
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              const SizedBox(height: 8),
               Container(
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
                   color: AppColors.surface,
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: AppColors.border),
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(
+                    color: AppColors.border,
+                    width: 1,
+                  ),
                 ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Response from $electricianName',
-                      style: AppTextStyles.bodyLarge.copyWith(
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      review.electricianReply!,
-                      style: AppTextStyles.bodyMedium,
-                    ),
-                  ],
+                child: Text(
+                  review.electricianReply!,
+                  style: AppTextStyles.bodyMedium,
                 ),
               ),
             ],
