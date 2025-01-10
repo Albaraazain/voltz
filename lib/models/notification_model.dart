@@ -1,57 +1,106 @@
+/// Represents different types of notifications in the system
 enum NotificationType {
   jobRequest,
   jobAccepted,
-  jobRejected,
   jobCompleted,
+  jobCancelled,
+  payment,
   review,
   message,
+  system
 }
 
+/// Model class for notifications
 class NotificationModel {
   final String id;
+  final String profileId;
   final String title;
   final String message;
   final NotificationType type;
-  final DateTime timestamp;
-  final bool isRead;
   final String? relatedId;
+  final bool isRead;
+  final DateTime createdAt;
 
   NotificationModel({
     required this.id,
+    required this.profileId,
     required this.title,
     required this.message,
     required this.type,
-    required this.timestamp,
-    this.isRead = false,
     this.relatedId,
+    this.isRead = false,
+    required this.createdAt,
   });
 
-  // For testing purposes - keeping as reference implementation
-  factory NotificationModel.dummy() {
-    // TODO: Replace dummy data with real notification data from backend
-    // TODO: Add dynamic user information instead of hardcoded "John Doe"
-    // TODO: Implement proper notification ID generation
-    // TODO: Add proper timestamp handling with user's timezone
+  factory NotificationModel.fromJson(Map<String, dynamic> json) {
     return NotificationModel(
-      id: '1', // Reference ID format
-      title: 'New Job Request', // Reference title format
-      message:
-          'You have a new job request from John Doe', // Reference message format
-      type: NotificationType.jobRequest,
-      timestamp: DateTime.now().subtract(const Duration(hours: 1)),
-      isRead: false,
-      relatedId: '123', // Reference related ID format
+      id: json['id'] as String,
+      profileId: json['profile_id'] as String,
+      title: json['title'] as String,
+      message: json['message'] as String,
+      type: NotificationType.values.firstWhere(
+        (e) => e.toString().split('.').last == json['type'],
+        orElse: () => NotificationType.system,
+      ),
+      relatedId: json['related_id'] as String?,
+      isRead: json['is_read'] as bool? ?? false,
+      createdAt: DateTime.parse(json['created_at'] as String),
     );
   }
 
-  // TODO: Implement push notification system
-  // TODO: Add notification preferences and settings
-  // TODO: Implement notification grouping and categorization
-  // TODO: Add rich media notification support
-  // TODO: Implement notification analytics
-  // TODO: Add scheduled notifications
-  // TODO: Implement notification actions (quick replies, accept/reject)
-  // TODO: Add offline notification queue
-  // TODO: Implement notification sound and vibration settings
-  // TODO: Add notification history and archiving
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id,
+      'profile_id': profileId,
+      'title': title,
+      'message': message,
+      'type': type.toString().split('.').last,
+      'related_id': relatedId,
+      'is_read': isRead,
+      'created_at': createdAt.toIso8601String(),
+    };
+  }
+
+  NotificationModel copyWith({
+    String? id,
+    String? profileId,
+    String? title,
+    String? message,
+    NotificationType? type,
+    String? relatedId,
+    bool? isRead,
+    DateTime? createdAt,
+  }) {
+    return NotificationModel(
+      id: id ?? this.id,
+      profileId: profileId ?? this.profileId,
+      title: title ?? this.title,
+      message: message ?? this.message,
+      type: type ?? this.type,
+      relatedId: relatedId ?? this.relatedId,
+      isRead: isRead ?? this.isRead,
+      createdAt: createdAt ?? this.createdAt,
+    );
+  }
+
+  @override
+  String toString() {
+    return 'NotificationModel(id: $id, profileId: $profileId, title: $title, '
+        'message: $message, type: $type, relatedId: $relatedId, '
+        'isRead: $isRead, createdAt: $createdAt)';
+  }
+
+  // For testing purposes
+  factory NotificationModel.dummy() {
+    return NotificationModel(
+      id: '1',
+      profileId: '123',
+      title: 'New Job Request',
+      message: 'You have a new job request in your area',
+      type: NotificationType.jobRequest,
+      relatedId: '456',
+      isRead: false,
+      createdAt: DateTime.now().subtract(const Duration(hours: 1)),
+    );
+  }
 }
