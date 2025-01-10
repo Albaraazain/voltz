@@ -50,9 +50,13 @@ class _HomeownerHomeScreenState extends State<HomeownerHomeScreen> {
                               ),
                             ),
                             const SizedBox(height: 4),
-                            Text(
-                              'John Doe',
-                              style: AppTextStyles.h2,
+                            Consumer<DatabaseProvider>(
+                              builder: (context, provider, child) {
+                                return Text(
+                                  provider.currentProfile?.name ?? 'Welcome',
+                                  style: AppTextStyles.h2,
+                                );
+                              },
                             ),
                           ],
                         ),
@@ -130,14 +134,34 @@ class _HomeownerHomeScreenState extends State<HomeownerHomeScreen> {
             // Recent Electricians List
             Consumer<DatabaseProvider>(
               builder: (context, databaseProvider, child) {
+                if (databaseProvider.isLoading) {
+                  return const SliverToBoxAdapter(
+                    child: Padding(
+                      padding: EdgeInsets.all(24.0),
+                      child: Center(
+                        child: CircularProgressIndicator(
+                          valueColor:
+                              AlwaysStoppedAnimation<Color>(AppColors.accent),
+                        ),
+                      ),
+                    ),
+                  );
+                }
+
                 final electricians = databaseProvider.electricians;
 
                 if (electricians.isEmpty) {
                   return const SliverToBoxAdapter(
-                    child: Center(
-                      child: CircularProgressIndicator(
-                        valueColor:
-                            AlwaysStoppedAnimation<Color>(AppColors.accent),
+                    child: Padding(
+                      padding: EdgeInsets.all(24.0),
+                      child: Center(
+                        child: Text(
+                          'No electricians found',
+                          style: TextStyle(
+                            color: AppColors.textSecondary,
+                            fontSize: 16,
+                          ),
+                        ),
                       ),
                     ),
                   );
@@ -154,10 +178,11 @@ class _HomeownerHomeScreenState extends State<HomeownerHomeScreen> {
                           vertical: 8.0,
                         ),
                         child: RecentElectricianCard(
-                          name: electrician.name,
+                          name: electrician.profile.name,
                           rating: electrician.rating,
-                          specialty:
-                              'Residential Electrician', // TODO: Add to model
+                          specialty: electrician.specialties.isNotEmpty
+                              ? electrician.specialties[0]
+                              : 'General Electrician',
                           jobsCompleted: electrician.jobsCompleted,
                         ),
                       );
