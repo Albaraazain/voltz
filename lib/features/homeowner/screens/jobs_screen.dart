@@ -38,13 +38,16 @@ class _JobsScreenState extends State<JobsScreen>
   }
 
   String _getStatusForTab(int tabIndex) {
+    // TODO: Move job status types to an enum or constants file
+    // TODO: Add support for custom status types based on business requirements
+    // Reference statuses kept for implementation:
     switch (tabIndex) {
       case 0:
-        return 'active';
+        return 'active'; // Reference status
       case 1:
-        return 'scheduled';
+        return 'scheduled'; // Reference status
       case 2:
-        return 'completed';
+        return 'completed'; // Reference status
       default:
         return '';
     }
