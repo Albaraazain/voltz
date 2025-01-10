@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../../core/constants/colors.dart';
 import '../../../core/constants/text_styles.dart';
+import '../../../core/services/logger_service.dart';
 import '../../../providers/auth_provider.dart';
 import '../../../providers/database_provider.dart';
 import '../../auth/screens/welcome_screen.dart';
@@ -22,10 +23,40 @@ class _SplashScreenState extends State<SplashScreen> {
     _initializeAndNavigate();
   }
 
+  Future<void> _debugDatabaseTables() async {
+    try {
+      final dbProvider = context.read<DatabaseProvider>();
+
+      // List of tables we want to debug
+      final tables = ['profiles', 'homeowners', 'electricians', 'jobs'];
+
+      LoggerService.info('Available tables in public schema:');
+      for (final tableName in tables) {
+        LoggerService.info('Table: $tableName');
+
+        try {
+          // Get 2 rows from each table
+          final rowsResponse =
+              await dbProvider.client.from(tableName).select().limit(2);
+
+          LoggerService.info('Sample rows:');
+          for (final row in rowsResponse) {
+            LoggerService.info(row.toString());
+          }
+        } catch (e) {
+          LoggerService.info('No rows found or no access');
+        }
+        LoggerService.info('-------------------');
+      }
+    } catch (e, stackTrace) {
+      LoggerService.error('Error debugging database tables', e, stackTrace);
+    }
+  }
+
   Future<void> _initializeAndNavigate() async {
     try {
-      // Initialize database
-      await context.read<DatabaseProvider>().initializeData();
+      // Debug database tables
+      await _debugDatabaseTables();
 
       // Add a minimum delay to show splash screen
       await Future.delayed(const Duration(seconds: 2));
