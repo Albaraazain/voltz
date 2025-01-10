@@ -35,6 +35,7 @@ class EarningsChart extends StatelessWidget {
               showTitles: true,
               interval: 1,
               getTitlesWidget: (value, meta) {
+                // TODO: Replace hardcoded days array with localized day names
                 const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
                 if (value.toInt() < 0 || value.toInt() >= days.length) {
                   return const Text('');
@@ -74,6 +75,7 @@ class EarningsChart extends StatelessWidget {
         lineBarsData: [
           LineChartBarData(
             spots: [
+              // TODO: Replace hardcoded earnings data points with real-time data from database
               const FlSpot(0, 500),
               const FlSpot(1, 800),
               const FlSpot(2, 600),
