@@ -135,7 +135,7 @@ class ProfileScreen extends StatelessWidget {
                     iconColor: Colors.red,
                     titleColor: Colors.red,
                     onTap: () {
-                      context.read<AuthProvider>().signOut();
+                      context.read<AuthProvider>().signOutAndNavigate(context);
                     },
                   ),
                 ],
