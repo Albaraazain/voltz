@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import '../../../core/constants/colors.dart';
 import '../../../core/constants/text_styles.dart';
+import '../../../providers/database_provider.dart';
 import '../widgets/electrician_card.dart';
 import '../widgets/search_filter_chip.dart';
 import '../widgets/filter_bottom_sheet.dart';
@@ -23,6 +25,15 @@ class _SearchScreenState extends State<SearchScreen> {
     'Installation',
     'Repair',
   ];
+
+  @override
+  void initState() {
+    super.initState();
+    // Load electricians when screen initializes
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      context.read<DatabaseProvider>().loadElectricians();
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -114,20 +125,41 @@ class _SearchScreenState extends State<SearchScreen> {
             ),
             // Search Results
             Expanded(
-              child: ListView.builder(
-                padding: const EdgeInsets.all(24),
-                itemCount: 10, // Mock data count
-                itemBuilder: (context, index) {
-                  return Padding(
-                    padding: const EdgeInsets.only(bottom: 16),
-                    child: ElectricianCard(
-                      name: 'John Smith',
-                      rating: 4.9,
-                      specialty: 'Residential & Commercial',
-                      price: '\$50-100/hr',
-                      distance: '2.5 km away',
-                      availability: 'Available Today',
-                    ),
+              child: Consumer<DatabaseProvider>(
+                builder: (context, databaseProvider, child) {
+                  final electricians = databaseProvider.electricians;
+
+                  if (electricians.isEmpty) {
+                    return const Center(
+                      child: CircularProgressIndicator(
+                        valueColor:
+                            AlwaysStoppedAnimation<Color>(AppColors.accent),
+                      ),
+                    );
+                  }
+
+                  return ListView.builder(
+                    padding: const EdgeInsets.all(24),
+                    itemCount: electricians.length,
+                    itemBuilder: (context, index) {
+                      final electrician = electricians[index];
+                      return Padding(
+                        padding: const EdgeInsets.only(bottom: 16),
+                        child: ElectricianCard(
+                          name: electrician.name,
+                          rating: electrician.rating,
+                          specialty:
+                              'Residential & Commercial', // TODO: Add to model
+                          price:
+                              '\$${electrician.hourlyRate.toStringAsFixed(0)}/hr',
+                          distance:
+                              '2.5 km away', // TODO: Add location calculation
+                          availability: electrician.isAvailable
+                              ? 'Available Today'
+                              : 'Unavailable',
+                        ),
+                      );
+                    },
                   );
                 },
               ),
