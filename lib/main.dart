@@ -115,7 +115,7 @@ class MyApp extends StatelessWidget {
         ChangeNotifierProvider(
           create: (_) {
             LoggerService.info('Initializing JobProvider');
-            return JobProvider();
+            return JobProvider(SupabaseConfig.client);
           },
         ),
       ],
