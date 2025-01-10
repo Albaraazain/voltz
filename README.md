@@ -610,3 +610,200 @@ gantt
    - Quantum-safe cryptography
    - Advanced threat protection
    - Automated security testing
+
+## Supabase Database Implementation
+
+### Database Schema Overview
+```mermaid
+erDiagram
+    profiles ||--|| auth.users : references
+    profiles ||--|{ electricians : has
+    profiles ||--|{ homeowners : has
+    electricians ||--|{ jobs : handles
+    homeowners ||--|{ jobs : creates
+
+    profiles {
+        UUID id PK
+        TEXT email
+        TEXT user_type
+        TEXT name
+        TIMESTAMP created_at
+        TIMESTAMP last_login_at
+    }
+
+    electricians {
+        UUID id PK
+        UUID profile_id FK
+        REAL rating
+        INTEGER jobs_completed
+        REAL hourly_rate
+        TEXT profile_image
+        BOOLEAN is_available
+        TEXT[] specialties
+        TEXT license_number
+        INTEGER years_of_experience
+        TIMESTAMP created_at
+    }
+
+    homeowners {
+        UUID id PK
+        UUID profile_id FK
+        TEXT phone
+        TEXT address
+        TEXT preferred_contact_method
+        TEXT emergency_contact
+        TIMESTAMP created_at
+    }
+
+    jobs {
+        UUID id PK
+        TEXT title
+        TEXT description
+        TEXT status
+        TIMESTAMP date
+        UUID electrician_id FK
+        UUID homeowner_id FK
+        REAL price
+        TIMESTAMP created_at
+    }
+```
+
+### Database Triggers and Functions
+
+#### 1. New User Handler
+```sql
+-- Trigger: on_auth_user_created
+-- Fires: AFTER INSERT ON auth.users
+-- Function: handle_new_user()
+```
+**Purpose**: Automatically creates appropriate profile records when a new user registers
+- Creates entry in profiles table
+- Creates corresponding record in either homeowners or electricians table
+- Handles user type determination based on registration metadata
+
+### Row Level Security (RLS) Policies
+
+#### 1. Profiles Table
+```sql
+- "Enable read access for own profile"
+  - Can only read own profile data
+- "Enable update for own profile"
+  - Can only update own profile data
+```
+
+#### 2. Electricians Table
+```sql
+- "Enable read access for all users"
+  - Public read access
+- "Enable insert for electrician profiles"
+  - Only for users with electrician type
+- "Enable update for own profile"
+  - Only electrician can update their own data
+```
+
+#### 3. Homeowners Table
+```sql
+- "Enable read access for all users"
+  - Public read access
+- "Enable insert for homeowner profiles"
+  - Only for users with homeowner type
+- "Enable update for own profile"
+  - Only homeowner can update their own data
+```
+
+#### 4. Jobs Table
+```sql
+- "Enable read access for involved parties"
+  - Only homeowner and assigned electrician can read
+- "Enable insert for homeowners"
+  - Only homeowners can create jobs
+- "Enable update for involved parties"
+  - Both homeowner and assigned electrician can update
+```
+
+### Table Relationships
+
+1. **User Authentication Flow**
+   ```mermaid
+   graph TD
+       A[auth.users] -->|triggers| B[handle_new_user]
+       B -->|creates| C[profiles]
+       C -->|creates| D[homeowners/electricians]
+   ```
+
+2. **Job Management Flow**
+   ```mermaid
+   graph TD
+       A[homeowners] -->|creates| B[jobs]
+       C[electricians] -->|assigned to| B
+       B -->|updates| D[job status]
+   ```
+
+### Data Types and Constraints
+
+1. **Primary Keys**
+   - All tables use UUID type
+   - Generated using `gen_random_uuid()`
+
+2. **Foreign Keys**
+   - `profiles.id` references `auth.users(id)`
+   - `electricians.profile_id` references `profiles(id)`
+   - `homeowners.profile_id` references `profiles(id)`
+   - `jobs.electrician_id` references `electricians(id)`
+   - `jobs.homeowner_id` references `homeowners(id)`
+
+3. **Default Values**
+   - `created_at`: `CURRENT_TIMESTAMP`
+   - `rating`: 0.0
+   - `jobs_completed`: 0
+   - `is_available`: true
+   - `user_type`: 'homeowner'
+
+### Security Implementation
+
+1. **Row Level Security**
+   - Enabled on all tables
+   - Custom policies for each table
+   - Role-based access control
+
+2. **Data Validation**
+   - Type checking
+   - Foreign key constraints
+   - Not null constraints where appropriate
+
+### Future Database Enhancements (V2)
+
+1. **Additional Tables Planned**
+   ```sql
+   - payments
+   - reviews
+   - chat_messages
+   - notifications
+   - service_areas
+   - equipment_inventory
+   - certifications
+   ```
+
+2. **Enhanced Triggers**
+   ```sql
+   - job_status_update_trigger
+   - payment_processing_trigger
+   - rating_update_trigger
+   - notification_trigger
+   ```
+
+3. **Materialized Views**
+   ```sql
+   - electrician_performance_metrics
+   - job_statistics
+   - earnings_reports
+   - customer_activity
+   ```
+
+4. **Indexing Strategy**
+   ```sql
+   - GiST indexes for location-based queries
+   - B-tree indexes for timestamp columns
+   - Hash indexes for UUID lookups
+   - Partial indexes for common filters
+   ```
