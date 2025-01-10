@@ -1,39 +1,42 @@
-class Job {
+class JobModel {
   final String id;
   final String title;
-  final String? description;
+  final String description;
   final String status;
   final DateTime date;
-  final String? electricianId;
   final String homeownerId;
   final double price;
+  final DateTime createdAt;
+  final DateTime? updatedAt;
 
-  Job({
+  JobModel({
     required this.id,
     required this.title,
-    this.description,
+    required this.description,
     required this.status,
     required this.date,
-    this.electricianId,
     required this.homeownerId,
     required this.price,
+    required this.createdAt,
+    this.updatedAt,
   });
 
-  // Convert a Map (from database) to a Job object
-  factory Job.fromMap(Map<String, dynamic> map) {
-    return Job(
-      id: map['id'],
-      title: map['title'],
-      description: map['description'],
-      status: map['status'],
-      date: DateTime.parse(map['date']),
-      electricianId: map['electrician_id'],
-      homeownerId: map['homeowner_id'],
-      price: map['price'].toDouble(),
+  factory JobModel.fromMap(Map<String, dynamic> map) {
+    return JobModel(
+      id: map['id'] as String,
+      title: map['title'] as String,
+      description: map['description'] as String,
+      status: map['status'] as String,
+      date: DateTime.parse(map['date'] as String),
+      homeownerId: map['homeowner_id'] as String,
+      price: (map['price'] as num).toDouble(),
+      createdAt: DateTime.parse(map['created_at'] as String),
+      updatedAt: map['updated_at'] != null
+          ? DateTime.parse(map['updated_at'] as String)
+          : null,
     );
   }
 
-  // Convert a Job object to a Map (for database)
   Map<String, dynamic> toMap() {
     return {
       'id': id,
@@ -41,9 +44,34 @@ class Job {
       'description': description,
       'status': status,
       'date': date.toIso8601String(),
-      'electrician_id': electricianId,
       'homeowner_id': homeownerId,
       'price': price,
+      'created_at': createdAt.toIso8601String(),
+      'updated_at': updatedAt?.toIso8601String(),
     };
+  }
+
+  JobModel copyWith({
+    String? id,
+    String? title,
+    String? description,
+    String? status,
+    DateTime? date,
+    String? homeownerId,
+    double? price,
+    DateTime? createdAt,
+    DateTime? updatedAt,
+  }) {
+    return JobModel(
+      id: id ?? this.id,
+      title: title ?? this.title,
+      description: description ?? this.description,
+      status: status ?? this.status,
+      date: date ?? this.date,
+      homeownerId: homeownerId ?? this.homeownerId,
+      price: price ?? this.price,
+      createdAt: createdAt ?? this.createdAt,
+      updatedAt: updatedAt ?? this.updatedAt,
+    );
   }
 }
