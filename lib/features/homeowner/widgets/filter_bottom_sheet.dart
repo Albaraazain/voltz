@@ -13,7 +13,7 @@ class FilterBottomSheet extends StatefulWidget {
 class _FilterBottomSheetState extends State<FilterBottomSheet> {
   double _maxPrice = 100;
   double _maxDistance = 10;
-  List<String> _selectedServices = [];
+  final List<String> _selectedServices = [];
 
   final List<String> _services = [
     'Residential',
