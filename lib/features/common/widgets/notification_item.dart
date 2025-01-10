@@ -6,32 +6,39 @@ import '../../../models/notification_model.dart';
 
 class NotificationItem extends StatelessWidget {
   final NotificationModel notification;
-  final VoidCallback onTap;
+  final VoidCallback? onTap;
 
   const NotificationItem({
     super.key,
     required this.notification,
-    required this.onTap,
+    this.onTap,
   });
 
   @override
   Widget build(BuildContext context) {
     return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(12),
+      onTap: () {
+        if (!notification.isRead) {
+          // Mark as read
+        }
+        onTap?.call();
+      },
       child: Container(
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
           color: notification.isRead
               ? AppColors.surface
-              : AppColors.primary.withValues(alpha: 26),
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: AppColors.border),
+              : AppColors.accent.withOpacity(0.1),
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(
+            color: AppColors.border,
+            width: 1,
+          ),
         ),
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            _buildNotificationIcon(),
+            _buildIcon(),
             const SizedBox(width: 16),
             Expanded(
               child: Column(
@@ -39,76 +46,74 @@ class NotificationItem extends StatelessWidget {
                 children: [
                   Text(
                     notification.title,
-                    style: AppTextStyles.bodyLarge.copyWith(
+                    style: AppTextStyles.bodyMedium.copyWith(
                       fontWeight: FontWeight.w600,
                     ),
                   ),
                   const SizedBox(height: 4),
                   Text(
                     notification.message,
-                    style: AppTextStyles.bodyMedium.copyWith(
+                    style: AppTextStyles.bodySmall.copyWith(
                       color: AppColors.textSecondary,
                     ),
                   ),
                   const SizedBox(height: 8),
                   Text(
-                    timeago.format(notification.timestamp),
-                    style: AppTextStyles.caption.copyWith(
+                    timeago.format(notification.createdAt),
+                    style: AppTextStyles.bodySmall.copyWith(
                       color: AppColors.textSecondary,
                     ),
                   ),
                 ],
               ),
             ),
-            if (!notification.isRead)
-              Container(
-                width: 8,
-                height: 8,
-                decoration: const BoxDecoration(
-                  color: AppColors.accent,
-                  shape: BoxShape.circle,
-                ),
-              ),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildNotificationIcon() {
-    late final IconData iconData;
-    late final Color iconColor;
+  Widget _buildIcon() {
+    IconData icon;
+    Color color;
 
     switch (notification.type) {
       case NotificationType.jobRequest:
-        iconData = Icons.work;
-        iconColor = Colors.blue;
+        icon = Icons.work_outline;
+        color = AppColors.primary;
+        break;
       case NotificationType.jobAccepted:
-        iconData = Icons.check_circle;
-        iconColor = Colors.green;
+        icon = Icons.check_circle_outline;
+        color = AppColors.success;
+        break;
+      case NotificationType.jobDeclined:
       case NotificationType.jobRejected:
-        iconData = Icons.cancel;
-        iconColor = Colors.red;
+        icon = Icons.cancel_outlined;
+        color = AppColors.error;
+        break;
       case NotificationType.jobCompleted:
-        iconData = Icons.task_alt;
-        iconColor = Colors.purple;
+        icon = Icons.task_alt;
+        color = AppColors.success;
+        break;
       case NotificationType.message:
-        iconData = Icons.message;
-        iconColor = Colors.orange;
+        icon = Icons.chat_bubble_outline;
+        color = AppColors.accent;
+        break;
       case NotificationType.review:
-        iconData = Icons.star;
-        iconColor = Colors.amber;
+        icon = Icons.star_outline;
+        color = AppColors.warning;
+        break;
     }
 
     return Container(
       padding: const EdgeInsets.all(8),
       decoration: BoxDecoration(
-        color: iconColor.withValues(alpha: 26),
+        color: color.withOpacity(0.1),
         borderRadius: BorderRadius.circular(8),
       ),
       child: Icon(
-        iconData,
-        color: iconColor,
+        icon,
+        color: color,
         size: 24,
       ),
     );
