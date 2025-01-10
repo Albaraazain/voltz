@@ -1,74 +1,66 @@
+import 'profile_model.dart';
+
 class Homeowner {
   final String id;
-  final String name;
-  final String email;
-  final String passwordHash;
+  final Profile profile;
   final String? phone;
   final String? address;
+  final String preferredContactMethod;
+  final String? emergencyContact;
   final DateTime createdAt;
-  final DateTime? lastLoginAt;
 
   Homeowner({
     required this.id,
-    required this.name,
-    required this.email,
-    required this.passwordHash,
+    required this.profile,
     this.phone,
     this.address,
+    this.preferredContactMethod = 'email',
+    this.emergencyContact,
     required this.createdAt,
-    this.lastLoginAt,
   });
 
-  // Convert a Map (from database) to a Homeowner object
-  factory Homeowner.fromMap(Map<String, dynamic> map) {
+  factory Homeowner.fromMap(Map<String, dynamic> map, {Profile? profile}) {
     return Homeowner(
       id: map['id'],
-      name: map['name'],
-      email: map['email'],
-      passwordHash: map['passwordHash'],
+      profile: profile ?? Profile.fromMap(map['profile']),
       phone: map['phone'],
       address: map['address'],
-      createdAt: DateTime.parse(map['createdAt']),
-      lastLoginAt: map['lastLoginAt'] != null
-          ? DateTime.parse(map['lastLoginAt'])
-          : null,
+      preferredContactMethod: map['preferred_contact_method'] ?? 'email',
+      emergencyContact: map['emergency_contact'],
+      createdAt: DateTime.parse(map['created_at']),
     );
   }
 
-  // Convert a Homeowner object to a Map (for database)
   Map<String, dynamic> toMap() {
     return {
       'id': id,
-      'name': name,
-      'email': email,
-      'passwordHash': passwordHash,
+      'profile_id': profile.id,
       'phone': phone,
       'address': address,
-      'createdAt': createdAt.toIso8601String(),
-      'lastLoginAt': lastLoginAt?.toIso8601String(),
+      'preferred_contact_method': preferredContactMethod,
+      'emergency_contact': emergencyContact,
+      'created_at': createdAt.toIso8601String(),
     };
   }
 
-  // Create a copy of the Homeowner with updated fields
   Homeowner copyWith({
     String? id,
-    String? name,
-    String? email,
-    String? passwordHash,
+    Profile? profile,
     String? phone,
     String? address,
+    String? preferredContactMethod,
+    String? emergencyContact,
     DateTime? createdAt,
-    DateTime? lastLoginAt,
   }) {
     return Homeowner(
       id: id ?? this.id,
-      name: name ?? this.name,
-      email: email ?? this.email,
-      passwordHash: passwordHash ?? this.passwordHash,
+      profile: profile ?? this.profile,
       phone: phone ?? this.phone,
       address: address ?? this.address,
+      preferredContactMethod:
+          preferredContactMethod ?? this.preferredContactMethod,
+      emergencyContact: emergencyContact ?? this.emergencyContact,
       createdAt: createdAt ?? this.createdAt,
-      lastLoginAt: lastLoginAt ?? this.lastLoginAt,
     );
   }
 }
