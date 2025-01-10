@@ -18,6 +18,23 @@ class DatabaseProvider with ChangeNotifier {
 
   DatabaseProvider(this._authProvider) {
     _initialize();
+    _authProvider.addListener(_onAuthStateChanged);
+  }
+
+  void _onAuthStateChanged() {
+    if (_authProvider.isAuthenticated) {
+      loadCurrentProfile();
+    } else {
+      _currentHomeowner = null;
+      _currentProfile = null;
+      notifyListeners();
+    }
+  }
+
+  @override
+  void dispose() {
+    _authProvider.removeListener(_onAuthStateChanged);
+    super.dispose();
   }
 
   // Expose client for debugging
@@ -41,25 +58,31 @@ class DatabaseProvider with ChangeNotifier {
       notifyListeners();
 
       final userId = _authProvider.userId;
+      LoggerService.info('Loading profile for user: $userId');
       if (userId == null) throw Exception('User not authenticated');
 
       // Load profile
       final profileResponse =
           await _client.from('profiles').select().eq('id', userId).single();
+      LoggerService.debug('Loaded profile: $profileResponse');
       _currentProfile = Profile.fromMap(profileResponse);
 
       // Load role-specific data
       switch (_currentProfile!.userType.toLowerCase()) {
         case 'homeowner':
+          LoggerService.info(
+              'Loading homeowner data for profile: ${_currentProfile!.id}');
           final homeownerResponse = await _client
               .from('homeowners')
               .select()
               .eq('profile_id', userId)
               .single();
+          LoggerService.debug('Loaded homeowner data: $homeownerResponse');
           _currentHomeowner = Homeowner.fromMap(
             homeownerResponse,
             profile: _currentProfile,
           );
+          LoggerService.info('Successfully loaded homeowner profile');
           break;
         case 'electrician':
           // Handle electrician profile if needed
