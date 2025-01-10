@@ -1,11 +1,27 @@
 import 'package:flutter/material.dart';
-import 'package:voltz/core/constants/colors.dart';
-import 'package:voltz/core/constants/text_styles.dart';
-import 'package:voltz/features/homeowner/widgets/job_status_card.dart';
-import 'package:voltz/features/homeowner/widgets/recent_electrician_card.dart';
+import 'package:provider/provider.dart';
+import '../../../core/constants/colors.dart';
+import '../../../core/constants/text_styles.dart';
+import '../../../providers/database_provider.dart';
+import '../widgets/job_status_card.dart';
+import '../widgets/recent_electrician_card.dart';
 
-class HomeownerHomeScreen extends StatelessWidget {
+class HomeownerHomeScreen extends StatefulWidget {
   const HomeownerHomeScreen({super.key});
+
+  @override
+  State<HomeownerHomeScreen> createState() => _HomeownerHomeScreenState();
+}
+
+class _HomeownerHomeScreenState extends State<HomeownerHomeScreen> {
+  @override
+  void initState() {
+    super.initState();
+    // Load electricians when screen initializes
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      context.read<DatabaseProvider>().loadElectricians();
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -112,22 +128,45 @@ class HomeownerHomeScreen extends StatelessWidget {
             ),
 
             // Recent Electricians List
-            SliverList(
-              delegate: SliverChildBuilderDelegate(
-                (context, index) {
-                  return const Padding(
-                    padding:
-                        EdgeInsets.symmetric(horizontal: 24.0, vertical: 8.0),
-                    child: RecentElectricianCard(
-                      name: 'Mike Johnson',
-                      rating: 4.8,
-                      specialty: 'Residential Electrician',
-                      jobsCompleted: 128,
+            Consumer<DatabaseProvider>(
+              builder: (context, databaseProvider, child) {
+                final electricians = databaseProvider.electricians;
+
+                if (electricians.isEmpty) {
+                  return const SliverToBoxAdapter(
+                    child: Center(
+                      child: CircularProgressIndicator(
+                        valueColor:
+                            AlwaysStoppedAnimation<Color>(AppColors.accent),
+                      ),
                     ),
                   );
-                },
-                childCount: 5,
-              ),
+                }
+
+                return SliverList(
+                  delegate: SliverChildBuilderDelegate(
+                    (context, index) {
+                      if (index >= electricians.length) return null;
+                      final electrician = electricians[index];
+                      return Padding(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 24.0,
+                          vertical: 8.0,
+                        ),
+                        child: RecentElectricianCard(
+                          name: electrician.name,
+                          rating: electrician.rating,
+                          specialty:
+                              'Residential Electrician', // TODO: Add to model
+                          jobsCompleted: electrician.jobsCompleted,
+                        ),
+                      );
+                    },
+                    childCount: electricians.length
+                        .clamp(0, 5), // Show max 5 recent electricians
+                  ),
+                );
+              },
             ),
 
             // Bottom Padding
