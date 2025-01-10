@@ -76,4 +76,15 @@ class JobProvider with ChangeNotifier {
       rethrow;
     }
   }
+
+  // TODO: Implement job search filters (by date, price range, location radius)
+  // TODO: Add job scheduling conflict detection
+  // TODO: Implement job cancellation policy and refund process
+  // TODO: Add emergency job request handling
+  // TODO: Implement job progress tracking and milestones
+  // TODO: Add job cost estimation calculator
+  // TODO: Implement recurring job scheduling
+  // TODO: Add multi-location job support
+  // TODO: Implement job completion verification process
+  // TODO: Add dispute resolution system
 }
