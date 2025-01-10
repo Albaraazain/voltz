@@ -3,7 +3,7 @@ import 'package:provider/provider.dart';
 import '../../../core/constants/colors.dart';
 import '../../../core/constants/text_styles.dart';
 import '../../../providers/job_provider.dart';
-import '../../../providers/auth_provider.dart';
+import '../../../providers/database_provider.dart';
 import '../widgets/job_card.dart';
 
 class JobsScreen extends StatefulWidget {
@@ -14,26 +14,51 @@ class JobsScreen extends StatefulWidget {
 }
 
 class _JobsScreenState extends State<JobsScreen>
-    with SingleTickerProviderStateMixin {
+    with SingleTickerProviderStateMixin, AutomaticKeepAliveClientMixin {
   late TabController _tabController;
+  final _focusNode = FocusNode();
+
+  @override
+  bool get wantKeepAlive => true;
 
   @override
   void initState() {
     super.initState();
     _tabController = TabController(length: 3, vsync: this);
+    _focusNode.addListener(_onFocusChange);
 
-    // Load jobs when screen initializes
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      final homeownerId = context.read<AuthProvider>().userId;
-      if (homeownerId != null) {
-        context.read<JobProvider>().loadJobs(homeownerId);
-      }
+      _loadJobs();
     });
+  }
+
+  void _onFocusChange() {
+    if (_focusNode.hasFocus) {
+      _loadJobs();
+    }
+  }
+
+  Future<void> _loadJobs() async {
+    final databaseProvider = context.read<DatabaseProvider>();
+    final homeowner = databaseProvider.currentHomeowner;
+
+    if (homeowner != null) {
+      await context.read<JobProvider>().loadJobs(homeowner.id);
+    } else if (!databaseProvider.isLoading) {
+      await databaseProvider.loadCurrentProfile();
+      if (mounted) {
+        final updatedHomeowner = databaseProvider.currentHomeowner;
+        if (updatedHomeowner != null) {
+          await context.read<JobProvider>().loadJobs(updatedHomeowner.id);
+        }
+      }
+    }
   }
 
   @override
   void dispose() {
     _tabController.dispose();
+    _focusNode.dispose();
     super.dispose();
   }
 
@@ -104,10 +129,7 @@ class _JobsScreenState extends State<JobsScreen>
                   ),
                   TextButton(
                     onPressed: () {
-                      final homeownerId = context.read<AuthProvider>().userId;
-                      if (homeownerId != null) {
-                        jobProvider.loadJobs(homeownerId);
-                      }
+                      _loadJobs();
                     },
                     child: const Text('Retry'),
                   ),
