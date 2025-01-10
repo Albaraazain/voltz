@@ -17,16 +17,34 @@ class ReviewModel {
     this.electricianReply,
   });
 
-  // For now, we'll add a dummy data constructor for testing
+  // For testing purposes - keeping as reference implementation
   factory ReviewModel.dummy() {
+    // TODO: Replace dummy data with real review data from backend
+    // TODO: Add proper user information fetching
+    // TODO: Implement proper review ID generation
+    // TODO: Add proper timestamp handling with user's timezone
+    // TODO: Implement photo upload and storage functionality
     return ReviewModel(
-      id: '1',
-      userName: 'John Doe',
-      rating: 4,
-      comment: 'Great service! Very professional and punctual.',
+      id: '1', // Reference ID format
+      userName: 'John Doe', // Reference user format
+      rating: 4, // Reference rating format
+      comment:
+          'Great service! Very professional and punctual.', // Reference comment format
       timestamp: DateTime.now().subtract(const Duration(days: 2)),
-      photos: [],
-      electricianReply: 'Thank you for your kind review!',
+      photos: [], // Reference photos format
+      electricianReply:
+          'Thank you for your kind review!', // Reference reply format
     );
   }
+
+  // TODO: Implement review verification system
+  // TODO: Add review moderation system
+  // TODO: Implement review response time tracking
+  // TODO: Add review analytics and reporting
+  // TODO: Implement review highlights and featured reviews
+  // TODO: Add review categories (workmanship, punctuality, etc.)
+  // TODO: Implement review sentiment analysis
+  // TODO: Add review helpfulness voting
+  // TODO: Implement review search and filtering
+  // TODO: Add review guidelines and policy enforcement
 }
