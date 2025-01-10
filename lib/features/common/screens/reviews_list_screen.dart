@@ -3,19 +3,32 @@ import 'package:provider/provider.dart';
 import '../../../core/constants/colors.dart';
 import '../../../core/constants/text_styles.dart';
 import '../../../providers/review_provider.dart';
-import '../widgets/rating_distribution.dart';
 import '../widgets/review_list_item.dart';
 import 'review_details_screen.dart';
 
-class ReviewsListScreen extends StatelessWidget {
+class ReviewsListScreen extends StatefulWidget {
   final String electricianId;
-  final String electricianName;
 
   const ReviewsListScreen({
     super.key,
     required this.electricianId,
-    required this.electricianName,
   });
+
+  @override
+  State<ReviewsListScreen> createState() => _ReviewsListScreenState();
+}
+
+class _ReviewsListScreenState extends State<ReviewsListScreen> {
+  @override
+  void initState() {
+    super.initState();
+    _loadReviews();
+  }
+
+  Future<void> _loadReviews() async {
+    final provider = context.read<ReviewProvider>();
+    await provider.loadReviews(widget.electricianId);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -23,96 +36,65 @@ class ReviewsListScreen extends StatelessWidget {
       backgroundColor: AppColors.background,
       appBar: AppBar(
         backgroundColor: AppColors.surface,
-        title: Text(
-          'Reviews & Ratings',
-          style: AppTextStyles.h2,
-        ),
+        elevation: 0,
+        title: Text('Reviews', style: AppTextStyles.h2),
       ),
       body: Consumer<ReviewProvider>(
-        builder: (context, reviewProvider, child) {
-          final reviews = reviewProvider.reviews;
-          final averageRating = reviewProvider.averageRating;
-          final ratingDistribution = reviewProvider.getRatingDistribution();
-
-          return CustomScrollView(
-            slivers: [
-              // Rating Summary
-              SliverToBoxAdapter(
-                child: Container(
-                  padding: const EdgeInsets.all(24),
-                  color: AppColors.surface,
+        builder: (context, provider, child) {
+          return provider.reviews.when(
+            initial: () => const Center(child: Text('No reviews yet')),
+            loading: () => const Center(child: CircularProgressIndicator()),
+            error: (error) => Center(
+              child: Text('Error: ${error.message}'),
+            ),
+            success: (reviews) {
+              if (reviews.isEmpty) {
+                return Center(
                   child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Text(
-                            averageRating.toStringAsFixed(1),
-                            style: AppTextStyles.h1.copyWith(
-                              color: AppColors.accent,
-                            ),
-                          ),
-                          const SizedBox(width: 8),
-                          Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Row(
-                                children: List.generate(5, (index) {
-                                  return Icon(
-                                    Icons.star,
-                                    size: 16,
-                                    color: index < averageRating.floor()
-                                        ? Colors.amber
-                                        : AppColors.border,
-                                  );
-                                }),
-                              ),
-                              const SizedBox(height: 4),
-                              Text(
-                                '${reviews.length} reviews',
-                                style: AppTextStyles.bodySmall,
-                              ),
-                            ],
-                          ),
-                        ],
+                      Icon(
+                        Icons.star_border,
+                        size: 64,
+                        color: AppColors.textSecondary,
                       ),
-                      const SizedBox(height: 24),
-                      RatingDistribution(distribution: ratingDistribution),
+                      const SizedBox(height: 16),
+                      Text(
+                        'No reviews yet',
+                        style: AppTextStyles.bodyLarge.copyWith(
+                          color: AppColors.textSecondary,
+                        ),
+                      ),
                     ],
                   ),
-                ),
-              ),
+                );
+              }
 
-              // Reviews List
-              SliverPadding(
-                padding: const EdgeInsets.all(24),
-                sliver: SliverList(
-                  delegate: SliverChildBuilderDelegate(
-                    (context, index) {
-                      final review = reviews[index];
-                      return Padding(
-                        padding: const EdgeInsets.only(bottom: 16),
-                        child: ReviewListItem(
-                          review: review,
-                          onTap: () {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (_) => ReviewDetailsScreen(
-                                  review: review,
-                                  electricianName: electricianName,
-                                ),
-                              ),
-                            );
-                          },
-                        ),
-                      );
-                    },
-                    childCount: reviews.length,
-                  ),
+              return RefreshIndicator(
+                onRefresh: _loadReviews,
+                child: ListView.separated(
+                  padding: const EdgeInsets.all(16),
+                  itemCount: reviews.length,
+                  separatorBuilder: (context, index) =>
+                      const SizedBox(height: 8),
+                  itemBuilder: (context, index) {
+                    final review = reviews[index];
+                    return ReviewListItem(
+                      review: review,
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) =>
+                                ReviewDetailsScreen(review: review),
+                          ),
+                        );
+                      },
+                    );
+                  },
                 ),
-              ),
-            ],
+              );
+            },
           );
         },
       ),
