@@ -180,6 +180,7 @@ class _SearchScreenState extends State<SearchScreen> {
                           availability: electrician.isAvailable
                               ? 'Available Today'
                               : 'Unavailable',
+                          isVerified: electrician.isVerified,
                         ),
                       );
                     },
