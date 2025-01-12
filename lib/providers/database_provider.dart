@@ -84,7 +84,10 @@ class DatabaseProvider with ChangeNotifier {
               .eq('profile_id', userId)
               .single();
           LoggerService.debug('Loaded homeowner data: $homeownerResponse');
-          _currentHomeowner = Homeowner.fromJson(homeownerResponse);
+          _currentHomeowner = Homeowner.fromJson(
+            homeownerResponse,
+            profile: _currentProfile!,
+          );
           LoggerService.info('Successfully loaded homeowner profile');
           break;
         case 'electrician':
@@ -103,9 +106,11 @@ class DatabaseProvider with ChangeNotifier {
 
       _isLoading = false;
       notifyListeners();
-    } catch (e, stackTrace) {
+    } catch (e) {
       _isLoading = false;
-      LoggerService.error('Failed to load current profile', e, stackTrace);
+      LoggerService.error(
+        'Failed to load current profile',
+      );
       notifyListeners();
       rethrow;
     }
