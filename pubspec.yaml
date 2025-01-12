@@ -59,6 +59,7 @@ dev_dependencies:
   # rules and activating additional ones.
   flutter_lints: ^5.0.0
   flutter_launcher_icons: ^0.13.1
+  test: ^1.24.9
 
 # Flutter Launcher Icons configuration
 flutter_launcher_icons:
