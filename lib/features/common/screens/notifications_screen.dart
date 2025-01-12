@@ -129,6 +129,12 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
       case NotificationType.review:
         // Navigate to reviews
         break;
+      case NotificationType.payment:
+        // Navigate to payment details
+        break;
+      case NotificationType.system:
+        // Handle system notification
+        break;
     }
   }
 }
