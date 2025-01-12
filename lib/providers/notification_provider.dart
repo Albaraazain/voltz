@@ -28,7 +28,7 @@ class NotificationProvider extends ChangeNotifier {
     notifyListeners();
 
     _notifications = await _repository.getUserNotifications(
-      _currentUserId!,
+      _currentUserId,
       limit: limit,
       offset: offset,
     );
@@ -45,7 +45,7 @@ class NotificationProvider extends ChangeNotifier {
     _notifications = ApiResponse.loading();
     notifyListeners();
 
-    _notifications = await _repository.getUnreadNotifications(_currentUserId!);
+    _notifications = await _repository.getUnreadNotifications(_currentUserId);
     notifyListeners();
 
     // Update unread count
@@ -56,25 +56,22 @@ class NotificationProvider extends ChangeNotifier {
   Future<void> refreshUnreadCount() async {
     if (_currentUserId == null) return;
 
-    _unreadCount = await _repository.getUnreadCount(_currentUserId!);
+    _unreadCount = await _repository.getUnreadCount(_currentUserId);
     notifyListeners();
   }
 
   /// Mark a notification as read
   Future<void> markAsRead(String notificationId) async {
     final response = await _repository.markAsRead(notificationId);
-    if (response.hasData) {
-      // Update the notification in the current list if it exists
-      if (_notifications.hasData) {
-        final index =
-            _notifications.data!.indexWhere((n) => n.id == notificationId);
-        if (index != -1) {
-          final updatedNotifications =
-              List<NotificationModel>.from(_notifications.data!);
-          updatedNotifications[index] = response.data!;
-          _notifications = ApiResponse.success(updatedNotifications);
-          notifyListeners();
-        }
+    if (response.hasData && _notifications.hasData) {
+      final index =
+          _notifications.data!.indexWhere((n) => n.id == notificationId);
+      if (index != -1) {
+        final updatedNotifications =
+            List<NotificationModel>.from(_notifications.data!);
+        updatedNotifications[index] = response.data!;
+        _notifications = ApiResponse.success(updatedNotifications);
+        notifyListeners();
       }
       // Refresh unread count
       await refreshUnreadCount();
@@ -85,16 +82,14 @@ class NotificationProvider extends ChangeNotifier {
   Future<void> markAllAsRead() async {
     if (_currentUserId == null) return;
 
-    final response = await _repository.markAllAsRead(_currentUserId!);
-    if (response.hasData) {
-      // Update all notifications in the current list
-      if (_notifications.hasData) {
-        final updatedNotifications = _notifications.data!.map((notification) {
-          return notification.copyWith(isRead: true);
-        }).toList();
-        _notifications = ApiResponse.success(updatedNotifications);
-        notifyListeners();
-      }
+    final response = await _repository.markAllAsRead(_currentUserId);
+    if (response.hasData && _notifications.hasData) {
+      final updatedNotifications = _notifications.data!.map((notification) {
+        return notification.copyWith(read: true);
+      }).toList();
+      _notifications = ApiResponse.success(updatedNotifications);
+      notifyListeners();
+
       // Reset unread count
       _unreadCount = ApiResponse.success(0);
       notifyListeners();
@@ -108,7 +103,7 @@ class NotificationProvider extends ChangeNotifier {
     if (_currentUserId == null) {
       return ApiResponse.error('User not authenticated');
     }
-    return _repository.getNotificationsByType(_currentUserId!, type);
+    return _repository.getNotificationsByType(_currentUserId, type);
   }
 
   /// Get notifications related to a specific entity
@@ -118,7 +113,7 @@ class NotificationProvider extends ChangeNotifier {
     if (_currentUserId == null) {
       return ApiResponse.error('User not authenticated');
     }
-    return _repository.getRelatedNotifications(_currentUserId!, relatedId);
+    return _repository.getRelatedNotifications(_currentUserId, relatedId);
   }
 
   /// Start listening to new notifications
@@ -127,7 +122,7 @@ class NotificationProvider extends ChangeNotifier {
 
     _notificationSubscription?.cancel();
     _notificationSubscription =
-        _repository.streamUserNotifications(_currentUserId!).listen((response) {
+        _repository.streamUserNotifications(_currentUserId).listen((response) {
       _notifications = response;
       notifyListeners();
       // Update unread count when new notifications arrive
@@ -146,7 +141,7 @@ class NotificationProvider extends ChangeNotifier {
     if (_currentUserId == null) return;
 
     final response = await _repository.deleteOldNotifications(
-      _currentUserId!,
+      _currentUserId,
       age: age ?? const Duration(days: 30),
     );
     if (response.hasData) {
