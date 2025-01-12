@@ -7,6 +7,7 @@ class RecentElectricianCard extends StatelessWidget {
   final double rating;
   final String specialty;
   final int jobsCompleted;
+  final bool isVerified;
 
   const RecentElectricianCard({
     super.key,
@@ -14,6 +15,7 @@ class RecentElectricianCard extends StatelessWidget {
     required this.rating,
     required this.specialty,
     required this.jobsCompleted,
+    this.isVerified = false,
   });
 
   @override
@@ -47,9 +49,21 @@ class RecentElectricianCard extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  name,
-                  style: AppTextStyles.h3,
+                Row(
+                  children: [
+                    Text(
+                      name,
+                      style: AppTextStyles.h3,
+                    ),
+                    if (isVerified) ...[
+                      const SizedBox(width: 4),
+                      const Icon(
+                        Icons.verified,
+                        size: 16,
+                        color: Colors.blue,
+                      ),
+                    ],
+                  ],
                 ),
                 const SizedBox(height: 4),
                 Text(
