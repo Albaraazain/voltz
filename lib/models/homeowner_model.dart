@@ -22,24 +22,24 @@ class Homeowner {
   Map<String, dynamic> toJson() {
     return {
       'id': id,
-      'profile': profile.toJson(),
+      'profile_id': profile.id,
       'phone': phone,
       'address': address,
-      'preferredContactMethod': preferredContactMethod,
-      'emergencyContact': emergencyContact,
-      'createdAt': createdAt.toIso8601String(),
+      'preferred_contact_method': preferredContactMethod,
+      'emergency_contact': emergencyContact,
+      'created_at': createdAt.toIso8601String(),
     };
   }
 
-  factory Homeowner.fromJson(Map<String, dynamic> json) {
+  factory Homeowner.fromJson(Map<String, dynamic> json, {Profile? profile}) {
     return Homeowner(
       id: json['id'],
-      profile: Profile.fromJson(json['profile']),
+      profile: profile ?? Profile.fromJson(json['profile']),
       phone: json['phone'],
       address: json['address'],
-      preferredContactMethod: json['preferredContactMethod'],
-      emergencyContact: json['emergencyContact'],
-      createdAt: DateTime.parse(json['createdAt']),
+      preferredContactMethod: json['preferred_contact_method'] ?? 'email',
+      emergencyContact: json['emergency_contact'],
+      createdAt: DateTime.parse(json['created_at']),
     );
   }
 }
