@@ -8,6 +8,10 @@ import '../models/homeowner_model.dart';
 import '../models/profile_model.dart';
 import '../models/job_model.dart';
 import '../models/review_model.dart';
+import '../models/service_model.dart';
+import '../models/working_hours_model.dart';
+import '../models/payment_info_model.dart';
+import '../models/notification_preferences_model.dart';
 import 'auth_provider.dart';
 
 class DatabaseProvider with ChangeNotifier {
@@ -67,7 +71,7 @@ class DatabaseProvider with ChangeNotifier {
       final profileResponse =
           await _client.from('profiles').select().eq('id', userId).single();
       LoggerService.debug('Loaded profile: $profileResponse');
-      _currentProfile = Profile.fromMap(profileResponse);
+      _currentProfile = Profile.fromJson(profileResponse);
 
       // Load role-specific data
       switch (_currentProfile!.userType.toLowerCase()) {
@@ -80,10 +84,7 @@ class DatabaseProvider with ChangeNotifier {
               .eq('profile_id', userId)
               .single();
           LoggerService.debug('Loaded homeowner data: $homeownerResponse');
-          _currentHomeowner = Homeowner.fromMap(
-            homeownerResponse,
-            profile: _currentProfile,
-          );
+          _currentHomeowner = Homeowner.fromJson(homeownerResponse);
           LoggerService.info('Successfully loaded homeowner profile');
           break;
         case 'electrician':
@@ -181,10 +182,11 @@ class DatabaseProvider with ChangeNotifier {
               } else {
                 LoggerService.debug(
                     'Successfully loaded profile data: $profileData');
-                profile = Profile.fromMap(profileData);
+                profile = Profile.fromJson(profileData);
               }
 
-              return Electrician.fromMap(data, profile: profile);
+              final electrician = Electrician.fromJson(data);
+              return electrician.copyWith(profile: profile);
             } catch (e, stackTrace) {
               LoggerService.error(
                   'Error parsing electrician data: $data', e, stackTrace);
@@ -211,7 +213,7 @@ class DatabaseProvider with ChangeNotifier {
         throw Exception('User must be authenticated to add an electrician');
       }
 
-      await _client.from('electricians').upsert(electrician.toMap());
+      await _client.from('electricians').upsert(electrician.toJson());
       await loadElectricians();
     } catch (e, stackTrace) {
       LoggerService.error('Failed to add electrician', e, stackTrace);
@@ -336,7 +338,7 @@ class DatabaseProvider with ChangeNotifier {
   }
 
   // Job Management Methods
-  Future<List<JobModel>> loadJobs({String? status}) async {
+  Future<List<Job>> loadJobs({String? status}) async {
     try {
       LoggerService.info('Loading jobs');
       if (!_authProvider.isAuthenticated)
@@ -374,43 +376,45 @@ class DatabaseProvider with ChangeNotifier {
       }
 
       final response = await query.order('created_at', ascending: false);
-      return response.map((data) => JobModel.fromMap(data)).toList();
+      return response.map((data) => Job.fromJson(data)).toList();
     } catch (e, stackTrace) {
       LoggerService.error('Failed to load jobs', e, stackTrace);
       rethrow;
     }
   }
 
-  Future<JobModel> createJob(JobModel job) async {
+  Future<Job> createJob(Job job) async {
     try {
       LoggerService.info('Creating job: ${job.title}');
-      if (!_authProvider.isAuthenticated)
-        throw Exception('User not authenticated');
+      if (!_authProvider.isAuthenticated) {
+        throw Exception('User must be authenticated to create a job');
+      }
 
       final response =
-          await _client.from('jobs').insert(job.toMap()).select().single();
+          await _client.from('jobs').insert(job.toJson()).select().single();
 
-      return JobModel.fromMap(response);
+      return Job.fromJson(response);
     } catch (e, stackTrace) {
       LoggerService.error('Failed to create job', e, stackTrace);
       rethrow;
     }
   }
 
-  Future<JobModel> updateJob(JobModel job) async {
+  Future<Job> updateJob(Job job) async {
     try {
       LoggerService.info('Updating job: ${job.id}');
-      if (!_authProvider.isAuthenticated)
-        throw Exception('User not authenticated');
+      if (!_authProvider.isAuthenticated) {
+        throw Exception('User must be authenticated to update a job');
+      }
 
       final response = await _client
           .from('jobs')
-          .update(job.toMap())
+          .update(job.toJson())
           .eq('id', job.id)
           .select()
           .single();
 
-      return JobModel.fromMap(response);
+      return Job.fromJson(response);
     } catch (e, stackTrace) {
       LoggerService.error('Failed to update job', e, stackTrace);
       rethrow;
@@ -419,9 +423,9 @@ class DatabaseProvider with ChangeNotifier {
 
   Future<void> deleteJob(String jobId) async {
     try {
-      LoggerService.info('Deleting job: $jobId');
-      if (!_authProvider.isAuthenticated)
-        throw Exception('User not authenticated');
+      if (!_authProvider.isAuthenticated) {
+        throw Exception('User must be authenticated to delete a job');
+      }
 
       await _client.from('jobs').delete().eq('id', jobId);
     } catch (e, stackTrace) {
@@ -433,15 +437,14 @@ class DatabaseProvider with ChangeNotifier {
   // Profile Management Methods
   Future<void> updateProfile(Profile profile) async {
     try {
-      LoggerService.info('Updating profile: ${profile.id}');
-      if (!_authProvider.isAuthenticated)
-        throw Exception('User not authenticated');
+      if (!_authProvider.isAuthenticated) {
+        throw Exception('User must be authenticated to update profile');
+      }
 
       await _client
           .from('profiles')
-          .update(profile.toMap())
+          .update(profile.toJson())
           .eq('id', profile.id);
-
       await loadCurrentProfile();
     } catch (e, stackTrace) {
       LoggerService.error('Failed to update profile', e, stackTrace);
@@ -521,119 +524,100 @@ class DatabaseProvider with ChangeNotifier {
     }
   }
 
-  Future<void> updateElectricianServices(
-      String electricianId, List<Service> services) async {
+  Future<void> updateElectricianServices(List<Service> services) async {
     try {
-      LoggerService.info('Updating electrician services: $electricianId');
-      if (!_authProvider.isAuthenticated)
-        throw Exception('User not authenticated');
-
-      await _client.from('electricians').update({
-        'services': services.map((s) => s.toMap()).toList(),
-      }).eq('id', electricianId);
-
-      // Update local list if the electrician exists in it
-      final index = _electricians.indexWhere((e) => e.id == electricianId);
-      if (index != -1) {
-        _electricians[index] =
-            _electricians[index].copyWith(services: services);
-        notifyListeners();
+      if (!_authProvider.isAuthenticated) {
+        throw Exception('User must be authenticated to update services');
       }
+
+      final electrician = _electricians.firstWhere(
+          (e) => e.profile.id == _currentProfile!.id,
+          orElse: () => throw Exception('Electrician not found'));
+
+      await _client
+          .from('electricians')
+          .update({'services': services.map((s) => s.toJson()).toList()}).eq(
+              'id', electrician.id);
+
+      await loadElectricians();
     } catch (e, stackTrace) {
-      LoggerService.error(
-          'Failed to update electrician services', e, stackTrace);
+      LoggerService.error('Failed to update services', e, stackTrace);
       rethrow;
     }
   }
 
-  Future<void> updateElectricianWorkingHours(
-      String electricianId, WorkingHours workingHours) async {
+  Future<void> updateElectricianWorkingHours(WorkingHours workingHours) async {
     try {
-      LoggerService.info('Updating electrician working hours: $electricianId');
-      if (!_authProvider.isAuthenticated)
-        throw Exception('User not authenticated');
-
-      await _client.from('electricians').update({
-        'working_hours': workingHours.toMap(),
-      }).eq('id', electricianId);
-
-      // Update local list if the electrician exists in it
-      final index = _electricians.indexWhere((e) => e.id == electricianId);
-      if (index != -1) {
-        _electricians[index] =
-            _electricians[index].copyWith(workingHours: workingHours);
-        notifyListeners();
+      if (!_authProvider.isAuthenticated) {
+        throw Exception('User must be authenticated to update working hours');
       }
+
+      final electrician = _electricians.firstWhere(
+          (e) => e.profile.id == _currentProfile!.id,
+          orElse: () => throw Exception('Electrician not found'));
+
+      await _client.from('electricians').update(
+          {'workingHours': workingHours.toJson()}).eq('id', electrician.id);
+
+      await loadElectricians();
     } catch (e, stackTrace) {
-      LoggerService.error(
-          'Failed to update electrician working hours', e, stackTrace);
+      LoggerService.error('Failed to update working hours', e, stackTrace);
       rethrow;
     }
   }
 
-  Future<void> updateElectricianPaymentInfo(
-      String electricianId, PaymentInfo paymentInfo) async {
+  Future<void> updateElectricianPaymentInfo(PaymentInfo? paymentInfo) async {
     try {
-      LoggerService.info('Updating electrician payment info: $electricianId');
-      if (!_authProvider.isAuthenticated)
-        throw Exception('User not authenticated');
-
-      await _client.from('electricians').update({
-        'payment_info': paymentInfo.toMap(),
-      }).eq('id', electricianId);
-
-      // Update local list if the electrician exists in it
-      final index = _electricians.indexWhere((e) => e.id == electricianId);
-      if (index != -1) {
-        _electricians[index] =
-            _electricians[index].copyWith(paymentInfo: paymentInfo);
-        notifyListeners();
+      if (!_authProvider.isAuthenticated) {
+        throw Exception('User must be authenticated to update payment info');
       }
+
+      final electrician = _electricians.firstWhere(
+          (e) => e.profile.id == _currentProfile!.id,
+          orElse: () => throw Exception('Electrician not found'));
+
+      await _client.from('electricians').update(
+          {'paymentInfo': paymentInfo?.toJson()}).eq('id', electrician.id);
+
+      await loadElectricians();
     } catch (e, stackTrace) {
-      LoggerService.error(
-          'Failed to update electrician payment info', e, stackTrace);
+      LoggerService.error('Failed to update payment info', e, stackTrace);
       rethrow;
     }
   }
 
   Future<void> updateElectricianNotificationPreferences(
-    String electricianId,
-    NotificationPreferences preferences,
-  ) async {
+      NotificationPreferences preferences) async {
     try {
-      LoggerService.info(
-          'Updating electrician notification preferences: $electricianId');
-      if (!_authProvider.isAuthenticated)
-        throw Exception('User not authenticated');
-
-      await _client.from('electricians').update({
-        'notification_preferences': preferences.toMap(),
-      }).eq('id', electricianId);
-
-      // Update local list if the electrician exists in it
-      final index = _electricians.indexWhere((e) => e.id == electricianId);
-      if (index != -1) {
-        _electricians[index] = _electricians[index].copyWith(
-          notificationPreferences: preferences,
-        );
-        notifyListeners();
+      if (!_authProvider.isAuthenticated) {
+        throw Exception(
+            'User must be authenticated to update notification preferences');
       }
+
+      final electrician = _electricians.firstWhere(
+          (e) => e.profile.id == _currentProfile!.id,
+          orElse: () => throw Exception('Electrician not found'));
+
+      await _client
+          .from('electricians')
+          .update({'notificationPreferences': preferences.toJson()}).eq(
+              'id', electrician.id);
+
+      await loadElectricians();
     } catch (e, stackTrace) {
       LoggerService.error(
-          'Failed to update electrician notification preferences',
-          e,
-          stackTrace);
+          'Failed to update notification preferences', e, stackTrace);
       rethrow;
     }
   }
 
   // Real-time subscriptions
-  void subscribeToJobs(void Function(JobModel) onJobUpdate) {
+  void subscribeToJobs(void Function(Job) onJobUpdate) {
     _client
         .from('jobs')
         .stream(primaryKey: ['id']).listen((List<Map<String, dynamic>> data) {
       if (data.isNotEmpty) {
-        final job = JobModel.fromMap(data.first);
+        final job = Job.fromJson(data.first);
         onJobUpdate(job);
       }
     });
@@ -686,8 +670,8 @@ class DatabaseProvider with ChangeNotifier {
           .order('rating', ascending: false);
 
       _electricians = response.map((data) {
-        final profile = Profile.fromMap(data['profile']);
-        return Electrician.fromMap(data, profile: profile);
+        final profile = Profile.fromJson(data['profile']);
+        return Electrician.fromJson(data);
       }).toList();
 
       _isLoading = false;
@@ -726,69 +710,45 @@ class DatabaseProvider with ChangeNotifier {
   }
 
   // Enhanced Job Search
-  Future<List<JobModel>> searchJobs({
+  Future<List<Job>> searchJobs({
     String? searchQuery,
     String? status,
+    String? electricianId,
+    String? homeownerId,
     DateTime? startDate,
     DateTime? endDate,
-    double? minPrice,
-    double? maxPrice,
-    int limit = 10,
-    int offset = 0,
   }) async {
     try {
-      final query = _client.from('jobs').select('''
-        *,
-        electrician:electricians (
-          id,
-          profile:profiles (id, name, email)
-        ),
-        homeowner:homeowners (
-          id,
-          profile:profiles (id, name, email)
-        )
-      ''');
+      var query = _client.from('jobs').select();
 
-      // Apply filters using filter() for complex queries
       if (searchQuery != null && searchQuery.isNotEmpty) {
-        query
-            .filter('title', 'ilike', '%$searchQuery%')
-            .filter('description', 'ilike', '%$searchQuery%');
+        query = query
+            .or('title.ilike.%$searchQuery%,description.ilike.%$searchQuery%');
       }
 
       if (status != null) {
-        query.eq('status', status);
+        query = query.eq('status', status);
+      }
+
+      if (electricianId != null) {
+        query = query.eq('electrician_id', electricianId);
+      }
+
+      if (homeownerId != null) {
+        query = query.eq('homeowner_id', homeownerId);
       }
 
       if (startDate != null) {
-        query.filter('date', 'gte', startDate.toIso8601String());
+        query = query.gte('date', startDate.toIso8601String());
       }
 
       if (endDate != null) {
-        query.filter('date', 'lte', endDate.toIso8601String());
+        query = query.lte('date', endDate.toIso8601String());
       }
 
-      if (minPrice != null) {
-        query.filter('price', 'gte', minPrice);
-      }
+      final response = await query.order('created_at', ascending: false);
 
-      if (maxPrice != null) {
-        query.filter('price', 'lte', maxPrice);
-      }
-
-      // Apply user-specific filters
-      if (_currentProfile?.userType.toLowerCase() == 'homeowner') {
-        query.eq('homeowner_id', _currentProfile!.id);
-      } else if (_currentProfile?.userType.toLowerCase() == 'electrician') {
-        query.eq('electrician_id', _currentProfile!.id);
-      }
-
-      // Apply pagination and ordering
-      final response = await query
-          .range(offset, offset + limit - 1)
-          .order('created_at', ascending: false);
-
-      return response.map((data) => JobModel.fromMap(data)).toList();
+      return response.map((data) => Job.fromJson(data)).toList();
     } catch (e, stackTrace) {
       LoggerService.error('Failed to search jobs', e, stackTrace);
       rethrow;
@@ -817,7 +777,7 @@ class DatabaseProvider with ChangeNotifier {
           .order('created_at', ascending: false)
           .limit(10);
 
-      return response.map((data) => Review.fromMap(data)).toList();
+      return response.map((data) => Review.fromJson(data)).toList();
     } catch (e, stackTrace) {
       LoggerService.error('Failed to load electrician reviews', e, stackTrace);
       rethrow;
@@ -827,40 +787,109 @@ class DatabaseProvider with ChangeNotifier {
   // Add new methods for managing services
   Future<void> addElectricianService(Service service) async {
     try {
-      final currentElectrician = electricians.firstWhere(
-        (e) => e.profile.id == currentProfile?.id,
-      );
+      if (!_authProvider.isAuthenticated) {
+        throw Exception('User must be authenticated to add service');
+      }
 
-      final updatedServices = [...currentElectrician.services, service];
-      final updatedElectrician = currentElectrician.copyWith(
-        services: updatedServices,
-      );
+      final electrician = _electricians.firstWhere(
+          (e) => e.profile.id == _currentProfile!.id,
+          orElse: () => throw Exception('Electrician not found'));
 
-      await updateElectricianProfile(updatedElectrician);
-      notifyListeners();
-    } catch (e) {
-      debugPrint('Error adding service: $e');
+      final services = [...electrician.services, service];
+      await updateElectricianServices(services);
+    } catch (e, stackTrace) {
+      LoggerService.error('Failed to add service', e, stackTrace);
       rethrow;
     }
   }
 
   Future<void> removeElectricianService(Service service) async {
     try {
+      if (!_authProvider.isAuthenticated) {
+        throw Exception('User must be authenticated to remove service');
+      }
+
+      final electrician = _electricians.firstWhere(
+          (e) => e.profile.id == _currentProfile!.id,
+          orElse: () => throw Exception('Electrician not found'));
+
+      final services =
+          electrician.services.where((s) => s.title != service.title).toList();
+      await updateElectricianServices(services);
+    } catch (e, stackTrace) {
+      LoggerService.error('Failed to remove service', e, stackTrace);
+      rethrow;
+    }
+  }
+
+  Future<List<Job>> getJobsForElectrician(String electricianId) async {
+    try {
+      final response = await _client
+          .from('jobs')
+          .select()
+          .eq('electrician_id', electricianId);
+      return response.map((job) => Job.fromJson(job)).toList();
+    } catch (e, stackTrace) {
+      LoggerService.error('Failed to get jobs for electrician', e, stackTrace);
+      rethrow;
+    }
+  }
+
+  Future<List<Job>> getJobsForHomeowner(String homeownerId) async {
+    try {
+      final response =
+          await _client.from('jobs').select().eq('homeowner_id', homeownerId);
+      return response.map((job) => Job.fromJson(job)).toList();
+    } catch (e, stackTrace) {
+      LoggerService.error('Failed to get jobs for homeowner', e, stackTrace);
+      rethrow;
+    }
+  }
+
+  Future<Job?> getJob(String jobId) async {
+    try {
+      final response =
+          await _client.from('jobs').select().eq('id', jobId).single();
+      return Job.fromJson(response);
+    } catch (e, stackTrace) {
+      LoggerService.error('Failed to get job', e, stackTrace);
+      rethrow;
+    }
+  }
+
+  Future<List<Review>> getReviewsForElectrician(String electricianId) async {
+    try {
+      final response = await _client
+          .from('reviews')
+          .select()
+          .eq('electrician_id', electricianId);
+      return response.map((review) => Review.fromJson(review)).toList();
+    } catch (e, stackTrace) {
+      LoggerService.error(
+          'Failed to get reviews for electrician', e, stackTrace);
+      rethrow;
+    }
+  }
+
+  Future<void> updatePaymentInfo(PaymentInfo paymentInfo) async {
+    if (!_authProvider.isAuthenticated) {
+      throw Exception(
+          'User must be authenticated to update payment information');
+    }
+
+    try {
       final currentElectrician = electricians.firstWhere(
         (e) => e.profile.id == currentProfile?.id,
       );
 
-      final updatedServices = currentElectrician.services
-          .where((s) => s.title != service.title)
-          .toList();
       final updatedElectrician = currentElectrician.copyWith(
-        services: updatedServices,
+        paymentInfo: paymentInfo,
       );
 
-      await updateElectricianProfile(updatedElectrician);
+      await _client.from('electricians').upsert(updatedElectrician.toJson());
       notifyListeners();
     } catch (e) {
-      debugPrint('Error removing service: $e');
+      LoggerService.error('Error updating payment info: $e');
       rethrow;
     }
   }
