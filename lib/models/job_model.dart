@@ -1,25 +1,21 @@
-import 'homeowner_model.dart';
-import 'electrician_model.dart';
-
 class Job {
-  // TODO: Add payment status tracking (Requires: Payment system implementation)
-  // TODO: Add job location and distance calculation (Requires: Location services)
-  // TODO: Add job completion verification fields (Requires: Job verification system)
-  // TODO: Add job timeline tracking (Requires: Progress tracking system)
-  // TODO: Add job materials and cost breakdown (Requires: Inventory system)
-  // TODO: Add job ratings and review fields (Requires: Review system)
-  // TODO: Add emergency status flag (Requires: Emergency handling system)
-  // TODO: Add job scheduling preferences (Requires: Scheduling system)
+  // Payment status constants
+  static const String PAYMENT_STATUS_PENDING = 'payment_pending';
+  static const String PAYMENT_STATUS_PROCESSING = 'payment_processing';
+  static const String PAYMENT_STATUS_COMPLETED = 'payment_completed';
+  static const String PAYMENT_STATUS_FAILED = 'payment_failed';
+  static const String PAYMENT_STATUS_REFUNDED = 'payment_refunded';
+
+  // Verification status constants
+  static const String VERIFICATION_STATUS_PENDING = 'verification_pending';
+  static const String VERIFICATION_STATUS_APPROVED = 'verification_approved';
+  static const String VERIFICATION_STATUS_REJECTED = 'verification_rejected';
 
   static const String STATUS_ACTIVE = 'active';
   static const String STATUS_COMPLETED = 'completed';
   static const String STATUS_CANCELLED = 'cancelled';
   static const String STATUS_IN_PROGRESS = 'in_progress';
   static const String STATUS_PENDING = 'pending';
-
-  // TODO: Add payment status constants (Requires: Payment system)
-  // TODO: Add verification status constants (Requires: Verification system)
-  // TODO: Add emergency status constants (Requires: Emergency system)
 
   static const double MIN_PRICE = 20.0;
   static const double MAX_PRICE = 10000.0;
@@ -29,10 +25,14 @@ class Job {
   final String description;
   final String status;
   final DateTime date;
-  final Electrician? electrician;
-  final Homeowner homeowner;
+  final String? electricianId;
+  final String homeownerId;
   final double price;
   final DateTime createdAt;
+  final String? paymentStatus;
+  final String? verificationStatus;
+  final Map<String, dynamic>? paymentDetails;
+  final Map<String, dynamic>? verificationDetails;
 
   const Job({
     required this.id,
@@ -40,10 +40,14 @@ class Job {
     required this.description,
     required this.status,
     required this.date,
-    this.electrician,
-    required this.homeowner,
+    this.electricianId,
+    required this.homeownerId,
     required this.price,
     required this.createdAt,
+    this.paymentStatus,
+    this.verificationStatus,
+    this.paymentDetails,
+    this.verificationDetails,
   });
 
   Map<String, dynamic> toJson() {
@@ -53,10 +57,14 @@ class Job {
       'description': description,
       'status': status,
       'date': date.toIso8601String(),
-      'electrician': electrician?.toJson(),
-      'homeowner': homeowner.toJson(),
+      'electrician_id': electricianId,
+      'homeowner_id': homeownerId,
       'price': price,
-      'createdAt': createdAt.toIso8601String(),
+      'created_at': createdAt.toIso8601String(),
+      'payment_status': paymentStatus,
+      'verification_status': verificationStatus,
+      'payment_details': paymentDetails,
+      'verification_details': verificationDetails,
     };
   }
 
@@ -67,12 +75,14 @@ class Job {
       description: json['description'],
       status: json['status'],
       date: DateTime.parse(json['date']),
-      electrician: json['electrician'] != null
-          ? Electrician.fromJson(json['electrician'])
-          : null,
-      homeowner: Homeowner.fromJson(json['homeowner']),
+      electricianId: json['electrician_id'],
+      homeownerId: json['homeowner_id'],
       price: json['price'].toDouble(),
-      createdAt: DateTime.parse(json['createdAt']),
+      createdAt: DateTime.parse(json['created_at']),
+      paymentStatus: json['payment_status'],
+      verificationStatus: json['verification_status'],
+      paymentDetails: json['payment_details'],
+      verificationDetails: json['verification_details'],
     );
   }
 
@@ -82,10 +92,14 @@ class Job {
     String? description,
     String? status,
     DateTime? date,
-    Electrician? electrician,
-    Homeowner? homeowner,
+    String? electricianId,
+    String? homeownerId,
     double? price,
     DateTime? createdAt,
+    String? paymentStatus,
+    String? verificationStatus,
+    Map<String, dynamic>? paymentDetails,
+    Map<String, dynamic>? verificationDetails,
   }) {
     return Job(
       id: id ?? this.id,
@@ -93,10 +107,14 @@ class Job {
       description: description ?? this.description,
       status: status ?? this.status,
       date: date ?? this.date,
-      electrician: electrician ?? this.electrician,
-      homeowner: homeowner ?? this.homeowner,
+      electricianId: electricianId ?? this.electricianId,
+      homeownerId: homeownerId ?? this.homeownerId,
       price: price ?? this.price,
       createdAt: createdAt ?? this.createdAt,
+      paymentStatus: paymentStatus ?? this.paymentStatus,
+      verificationStatus: verificationStatus ?? this.verificationStatus,
+      paymentDetails: paymentDetails ?? this.paymentDetails,
+      verificationDetails: verificationDetails ?? this.verificationDetails,
     );
   }
 
@@ -107,6 +125,24 @@ class Job {
       STATUS_CANCELLED,
       STATUS_IN_PROGRESS,
       STATUS_PENDING
+    ].contains(status);
+  }
+
+  static bool isValidPaymentStatus(String status) {
+    return [
+      PAYMENT_STATUS_PENDING,
+      PAYMENT_STATUS_PROCESSING,
+      PAYMENT_STATUS_COMPLETED,
+      PAYMENT_STATUS_FAILED,
+      PAYMENT_STATUS_REFUNDED
+    ].contains(status);
+  }
+
+  static bool isValidVerificationStatus(String status) {
+    return [
+      VERIFICATION_STATUS_PENDING,
+      VERIFICATION_STATUS_APPROVED,
+      VERIFICATION_STATUS_REJECTED
     ].contains(status);
   }
 
