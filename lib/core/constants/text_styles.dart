@@ -88,4 +88,10 @@ class AppTextStyles {
     height: 1.5,
     decoration: TextDecoration.underline,
   );
+
+  static const TextStyle button = TextStyle(
+    fontSize: 16,
+    fontWeight: FontWeight.w600,
+    color: AppColors.surface,
+  );
 }
