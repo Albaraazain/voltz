@@ -1,86 +1,93 @@
-import 'dart:async';
 import 'package:flutter/foundation.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
-import '../core/utils/api_response.dart';
+import '../core/services/logger_service.dart';
 import '../models/review_model.dart';
 import '../repositories/review_repository.dart';
 
-class ReviewProvider extends ChangeNotifier {
+class ReviewProvider with ChangeNotifier {
   final ReviewRepository _repository;
-  ApiResponse<List<ReviewModel>> _reviews = ApiResponse.initial();
-  double _averageRating = 0.0;
-  Map<int, int> _ratingDistribution = {};
+  List<Review> _reviews = [];
+  bool _isLoading = false;
 
   ReviewProvider(this._repository);
 
-  ApiResponse<List<ReviewModel>> get reviews => _reviews;
-  double get averageRating => _averageRating;
-  Map<int, int> get ratingDistribution => _ratingDistribution;
+  List<Review> get reviews => _reviews;
+  bool get isLoading => _isLoading;
 
-  Future<void> loadReviews(String electricianId) async {
-    _reviews = ApiResponse.loading();
-    notifyListeners();
+  Future<void> loadReviews({String? electricianId}) async {
+    try {
+      _isLoading = true;
+      notifyListeners();
 
-    _reviews = await _repository.getReviews(electricianId);
-    if (_reviews.hasData) {
-      _calculateStats();
-    }
-    notifyListeners();
-  }
+      _reviews = await _repository.getReviews(electricianId: electricianId);
 
-  void _calculateStats() {
-    if (!_reviews.hasData) return;
-
-    final reviews = _reviews.data!;
-    if (reviews.isEmpty) {
-      _averageRating = 0.0;
-      _ratingDistribution = {};
-      return;
-    }
-
-    // Calculate average rating
-    double sum = 0;
-    _ratingDistribution = {1: 0, 2: 0, 3: 0, 4: 0, 5: 0};
-
-    for (final review in reviews) {
-      sum += review.rating;
-      final rating = review.rating.round();
-      _ratingDistribution[rating] = (_ratingDistribution[rating] ?? 0) + 1;
-    }
-
-    _averageRating = sum / reviews.length;
-  }
-
-  Future<void> addReview({
-    required String electricianId,
-    required String userId,
-    required String userName,
-    required double rating,
-    String? comment,
-  }) async {
-    final review = ReviewModel(
-      id: DateTime.now().millisecondsSinceEpoch.toString(),
-      userId: userId,
-      userName: userName,
-      electricianId: electricianId,
-      rating: rating,
-      comment: comment,
-      timestamp: DateTime.now(),
-    );
-
-    final response = await _repository.addReview(review);
-    if (response.hasData) {
-      if (_reviews.hasData) {
-        final updatedReviews = List<ReviewModel>.from(_reviews.data!)
-          ..add(response.data!);
-        _reviews = ApiResponse.success(updatedReviews);
-        _calculateStats();
-        notifyListeners();
-      }
+      _isLoading = false;
+      notifyListeners();
+    } catch (e, stackTrace) {
+      _isLoading = false;
+      LoggerService.error('Failed to load reviews', e, stackTrace);
+      notifyListeners();
+      rethrow;
     }
   }
 
-  Map<int, int> getRatingDistribution() {
-    return _ratingDistribution;
+  Future<void> addReview(Review review) async {
+    try {
+      _isLoading = true;
+      notifyListeners();
+
+      await _repository.addReview(review);
+      await loadReviews(electricianId: review.electrician.id);
+
+      _isLoading = false;
+      notifyListeners();
+    } catch (e, stackTrace) {
+      _isLoading = false;
+      LoggerService.error('Failed to add review', e, stackTrace);
+      notifyListeners();
+      rethrow;
+    }
+  }
+
+  Future<void> updateReview(Review review) async {
+    try {
+      _isLoading = true;
+      notifyListeners();
+
+      await _repository.updateReview(review);
+      await loadReviews(electricianId: review.electrician.id);
+
+      _isLoading = false;
+      notifyListeners();
+    } catch (e, stackTrace) {
+      _isLoading = false;
+      LoggerService.error('Failed to update review', e, stackTrace);
+      notifyListeners();
+      rethrow;
+    }
+  }
+
+  Future<void> deleteReview(String reviewId) async {
+    try {
+      _isLoading = true;
+      notifyListeners();
+
+      await _repository.deleteReview(reviewId);
+      await loadReviews();
+
+      _isLoading = false;
+      notifyListeners();
+    } catch (e, stackTrace) {
+      _isLoading = false;
+      LoggerService.error('Failed to delete review', e, stackTrace);
+      notifyListeners();
+      rethrow;
+    }
+  }
+
+  List<Review> getReviewsForElectrician(String electricianId) {
+    return reviews
+        .where((review) => review.electrician.id == electricianId)
+        .toList()
+      ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
   }
 }
