@@ -3,6 +3,7 @@ ALTER TABLE electricians ADD COLUMN IF NOT EXISTS is_verified BOOLEAN DEFAULT fa
 
 -- Drop existing policies
 DROP POLICY IF EXISTS "Enable read access for all users" ON electricians;
+DROP POLICY IF EXISTS "Enable read access for verified electricians" ON electricians;
 DROP POLICY IF EXISTS "Enable admin verification" ON electricians;
 
 -- Create policies for electrician visibility
