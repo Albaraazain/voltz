@@ -7,7 +7,7 @@ DROP POLICY IF EXISTS "Enable admin verification" ON electricians;
 
 -- Create policies for electrician visibility
 CREATE POLICY "Enable read access for verified electricians" ON electricians
-    FOR SELECT TO authenticated
+    FOR SELECT
     USING (
         -- Admins can see all electricians
         (auth.jwt() ->> 'role' = 'admin')
@@ -24,9 +24,12 @@ CREATE POLICY "Enable read access for verified electricians" ON electricians
             )
             AND is_verified = true
         )
+        OR
+        -- Allow read access for all verified electricians
+        (is_verified = true)
     );
 
 -- Create policy for admin to update verification status
 CREATE POLICY "Enable admin verification" ON electricians
-    FOR UPDATE TO authenticated
+    FOR UPDATE
     USING (auth.jwt() ->> 'role' = 'admin'); 
