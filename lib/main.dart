@@ -5,15 +5,21 @@ import 'core/theme/app_theme.dart';
 import 'core/services/logger_service.dart';
 import 'core/config/supabase_config.dart';
 import 'providers/auth_provider.dart';
+import 'providers/database_provider.dart';
 import 'providers/electrician_provider.dart';
 import 'providers/homeowner_provider.dart';
-import 'providers/database_provider.dart';
 import 'providers/job_provider.dart';
 import 'features/common/screens/splash_screen.dart';
 import 'features/homeowner/screens/homeowner_main_screen.dart';
 import 'features/electrician/screens/electrician_main_screen.dart';
 import 'features/homeowner/screens/create_job_screen.dart';
 import 'features/electrician/screens/edit_profile_screen.dart';
+import 'features/electrician/screens/manage_services_screen.dart';
+import 'features/electrician/screens/reviews_screen.dart';
+import 'features/electrician/screens/availability_settings_screen.dart';
+import 'features/electrician/screens/payment_settings_screen.dart';
+import 'features/common/screens/review_details_screen.dart';
+import 'models/review_model.dart';
 
 Future<void> validateDatabaseSchema() async {
   final client = SupabaseConfig.client;
@@ -149,6 +155,28 @@ class MyApp extends StatelessWidget {
             case '/electrician/edit-profile':
               return MaterialPageRoute(
                 builder: (_) => const EditProfileScreen(),
+              );
+            case '/electrician/manage-services':
+              return MaterialPageRoute(
+                builder: (_) => const ManageServicesScreen(),
+              );
+            case '/electrician/reviews':
+              return MaterialPageRoute(
+                builder: (_) => const ReviewsScreen(),
+              );
+            case '/electrician/availability':
+              return MaterialPageRoute(
+                builder: (_) => const AvailabilitySettingsScreen(),
+              );
+            case '/electrician/payment':
+              return MaterialPageRoute(
+                builder: (_) => const PaymentSettingsScreen(),
+              );
+            case '/review-details':
+              return MaterialPageRoute(
+                builder: (_) => ReviewDetailsScreen(
+                  review: settings.arguments as Review,
+                ),
               );
             default:
               LoggerService.warning(
