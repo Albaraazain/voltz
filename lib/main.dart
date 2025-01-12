@@ -13,6 +13,7 @@ import 'features/common/screens/splash_screen.dart';
 import 'features/homeowner/screens/homeowner_main_screen.dart';
 import 'features/electrician/screens/electrician_main_screen.dart';
 import 'features/homeowner/screens/create_job_screen.dart';
+import 'features/electrician/screens/edit_profile_screen.dart';
 
 Future<void> validateDatabaseSchema() async {
   final client = SupabaseConfig.client;
@@ -144,6 +145,10 @@ class MyApp extends StatelessWidget {
             case '/create-job':
               return MaterialPageRoute(
                 builder: (_) => const CreateJobScreen(),
+              );
+            case '/electrician/edit-profile':
+              return MaterialPageRoute(
+                builder: (_) => const EditProfileScreen(),
               );
             default:
               LoggerService.warning(
