@@ -1,219 +1,372 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import '../../../core/constants/colors.dart';
 import '../../../core/constants/text_styles.dart';
+import '../../../providers/database_provider.dart';
+import '../../../providers/auth_provider.dart';
+import '../../../models/electrician_model.dart';
 import '../widgets/service_item.dart';
 import '../widgets/review_card.dart';
 import '../../common/widgets/custom_button.dart';
+import '../../common/widgets/loading_indicator.dart';
 
 class ElectricianProfileScreen extends StatelessWidget {
   const ElectricianProfileScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: AppColors.background,
-      body: CustomScrollView(
-        slivers: [
-          // Profile Header
-          SliverAppBar(
-            expandedHeight: 200,
-            pinned: true,
-            backgroundColor: AppColors.primary,
-            flexibleSpace: FlexibleSpaceBar(
-              background: Stack(
-                fit: StackFit.expand,
-                children: [
-                  Container(
-                    color: AppColors.primary,
-                    padding: const EdgeInsets.only(bottom: 48),
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Container(
-                          width: 100,
-                          height: 100,
-                          decoration: BoxDecoration(
-                            shape: BoxShape.circle,
-                            border: Border.all(
-                              color: AppColors.accent,
-                              width: 2,
+    return Consumer<DatabaseProvider>(
+      builder: (context, dbProvider, child) {
+        if (dbProvider.isLoading) {
+          return const LoadingIndicator();
+        }
+
+        final electrician = dbProvider.electricians.firstWhere(
+          (e) => e.profile.id == dbProvider.currentProfile?.id,
+          orElse: () => throw Exception('Electrician profile not found'),
+        );
+
+        return Scaffold(
+          backgroundColor: AppColors.background,
+          body: CustomScrollView(
+            slivers: [
+              // Profile Header
+              SliverAppBar(
+                expandedHeight: 200,
+                pinned: true,
+                backgroundColor: AppColors.primary,
+                flexibleSpace: FlexibleSpaceBar(
+                  background: Stack(
+                    fit: StackFit.expand,
+                    children: [
+                      Container(
+                        color: AppColors.primary,
+                        padding: const EdgeInsets.only(bottom: 48),
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Container(
+                              width: 100,
+                              height: 100,
+                              decoration: BoxDecoration(
+                                shape: BoxShape.circle,
+                                border: Border.all(
+                                  color: AppColors.accent,
+                                  width: 2,
+                                ),
+                                image: electrician.profileImage != null
+                                    ? DecorationImage(
+                                        image: NetworkImage(
+                                            electrician.profileImage!),
+                                        fit: BoxFit.cover,
+                                      )
+                                    : null,
+                              ),
+                              child: electrician.profileImage == null
+                                  ? const Icon(
+                                      Icons.person,
+                                      size: 50,
+                                      color: AppColors.accent,
+                                    )
+                                  : null,
                             ),
-                            color: AppColors.surface,
-                          ),
-                          child: const Icon(
-                            Icons.person,
-                            size: 50,
-                            color: AppColors.accent,
-                          ),
+                            const SizedBox(height: 16),
+                            Text(
+                              electrician.profile.name,
+                              style: AppTextStyles.h2.copyWith(
+                                color: AppColors.accent,
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                if (electrician.isVerified) ...[
+                                  const Icon(
+                                    Icons.verified,
+                                    color: AppColors.accent,
+                                    size: 16,
+                                  ),
+                                  const SizedBox(width: 4),
+                                  Text(
+                                    'Verified',
+                                    style: AppTextStyles.bodySmall.copyWith(
+                                      color: AppColors.accent,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 8),
+                                ],
+                                Text(
+                                  'License: ${electrician.licenseNumber}',
+                                  style: AppTextStyles.bodySmall.copyWith(
+                                    color: AppColors.accent,
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              electrician.phone,
+                              style: AppTextStyles.bodySmall.copyWith(
+                                color: AppColors.accent,
+                              ),
+                            ),
+                          ],
                         ),
-                        const SizedBox(height: 16),
-                        Text(
-                          'Mike Johnson',
-                          style: AppTextStyles.h2.copyWith(
-                            color: AppColors.accent,
-                          ),
-                        ),
-                      ],
-                    ),
+                      ),
+                    ],
                   ),
+                ),
+                actions: [
+                  Switch(
+                    value: electrician.isAvailable,
+                    onChanged: (value) async {
+                      await dbProvider.updateElectricianAvailability(
+                        electrician.id,
+                        value,
+                      );
+                    },
+                    activeColor: AppColors.accent,
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.edit),
+                    onPressed: () {
+                      Navigator.pushNamed(context, '/electrician/edit-profile');
+                    },
+                  ),
+                  const SizedBox(width: 8),
                 ],
               ),
-            ),
-            actions: [
-              IconButton(
-                icon: const Icon(Icons.edit),
-                onPressed: () {
-                  // TODO: Navigate to edit profile
-                },
+
+              // Stats Row
+              SliverToBoxAdapter(
+                child: Container(
+                  padding: const EdgeInsets.all(24),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceAround,
+                    children: [
+                      _buildStat(
+                        electrician.rating.toStringAsFixed(1),
+                        'Rating',
+                        Icons.star,
+                      ),
+                      _buildStat(
+                        electrician.jobsCompleted.toString(),
+                        'Jobs',
+                        Icons.work,
+                      ),
+                      _buildStat(
+                        '${electrician.yearsOfExperience} yrs',
+                        'Experience',
+                        Icons.timer,
+                      ),
+                    ],
+                  ),
+                ),
               ),
-              const SizedBox(width: 8),
+
+              // Specialties Section
+              SliverToBoxAdapter(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 24),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text('Specialties', style: AppTextStyles.h3),
+                      const SizedBox(height: 16),
+                      if (electrician.specialties.isEmpty)
+                        Center(
+                          child: Text(
+                            'No specialties added yet',
+                            style: AppTextStyles.bodySmall.copyWith(
+                              color: AppColors.textSecondary,
+                            ),
+                          ),
+                        )
+                      else
+                        Wrap(
+                          spacing: 8,
+                          runSpacing: 8,
+                          children: electrician.specialties.map((specialty) {
+                            return Chip(
+                              label: Text(specialty),
+                              backgroundColor: AppColors.surface,
+                              labelStyle: AppTextStyles.bodySmall,
+                            );
+                          }).toList(),
+                        ),
+                    ],
+                  ),
+                ),
+              ),
+
+              // Services Section
+              SliverToBoxAdapter(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 24),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text('My Services', style: AppTextStyles.h3),
+                          TextButton(
+                            onPressed: () {
+                              Navigator.pushNamed(
+                                  context, '/electrician/manage-services');
+                            },
+                            child: Text(
+                              'Edit',
+                              style: AppTextStyles.link,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 16),
+                      if (electrician.services.isEmpty)
+                        Center(
+                          child: Text(
+                            'No services added yet',
+                            style: AppTextStyles.bodySmall.copyWith(
+                              color: AppColors.textSecondary,
+                            ),
+                          ),
+                        )
+                      else
+                        ...electrician.services.map(
+                          (service) => ServiceItem(
+                            title: service.title,
+                            price: '\$${service.price.toStringAsFixed(2)}/hr',
+                            description: service.description,
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
+              ),
+
+              // Reviews Section
+              SliverToBoxAdapter(
+                child: Padding(
+                  padding: const EdgeInsets.all(24),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text('Reviews', style: AppTextStyles.h3),
+                          TextButton(
+                            onPressed: () {
+                              Navigator.pushNamed(
+                                  context, '/electrician/reviews');
+                            },
+                            child: Text(
+                              'See All',
+                              style: AppTextStyles.link,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 16),
+                      FutureBuilder(
+                        future:
+                            dbProvider.getElectricianReviews(electrician.id),
+                        builder: (context, snapshot) {
+                          if (snapshot.connectionState ==
+                              ConnectionState.waiting) {
+                            return const Center(child: LoadingIndicator());
+                          }
+
+                          if (!snapshot.hasData ||
+                              (snapshot.data as List).isEmpty) {
+                            return Center(
+                              child: Text(
+                                'No reviews yet',
+                                style: AppTextStyles.bodySmall.copyWith(
+                                  color: AppColors.textSecondary,
+                                ),
+                              ),
+                            );
+                          }
+
+                          final reviews = snapshot.data as List;
+                          return Column(
+                            children: reviews.take(2).map((review) {
+                              return ReviewCard(
+                                customerName: review.homeowner.profile.name,
+                                rating: review.rating,
+                                comment: review.comment,
+                                date: review.createdAt,
+                              );
+                            }).toList(),
+                          );
+                        },
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+
+              // Account Settings Section
+              SliverToBoxAdapter(
+                child: Padding(
+                  padding: const EdgeInsets.all(24),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text('Account Settings', style: AppTextStyles.h3),
+                      const SizedBox(height: 16),
+                      _buildSettingsButton(
+                        'Availability Schedule',
+                        Icons.calendar_today_outlined,
+                        () {
+                          Navigator.pushNamed(
+                              context, '/electrician/availability');
+                        },
+                      ),
+                      _buildSettingsButton(
+                        'Payment Information',
+                        Icons.payment_outlined,
+                        () {
+                          Navigator.pushNamed(context, '/electrician/payment');
+                        },
+                      ),
+                      _buildSettingsButton(
+                        'Notifications',
+                        Icons.notifications_outlined,
+                        () {
+                          Navigator.pushNamed(
+                              context, '/electrician/notifications');
+                        },
+                      ),
+                      const SizedBox(height: 24),
+                      CustomButton(
+                        onPressed: () async {
+                          final authProvider = context.read<AuthProvider>();
+                          await authProvider.signOut();
+                          if (context.mounted) {
+                            Navigator.pushNamedAndRemoveUntil(
+                              context,
+                              '/login',
+                              (route) => false,
+                            );
+                          }
+                        },
+                        text: 'Sign Out',
+                        type: ButtonType.secondary,
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+
+              const SliverPadding(padding: EdgeInsets.only(bottom: 24)),
             ],
           ),
-
-          // Stats Row
-          SliverToBoxAdapter(
-            child: Container(
-              padding: const EdgeInsets.all(24),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceAround,
-                children: [
-                  _buildStat('4.9', 'Rating', Icons.star),
-                  _buildStat('156', 'Jobs', Icons.work),
-                  _buildStat('2 yrs', 'Experience', Icons.timer),
-                ],
-              ),
-            ),
-          ),
-
-          // Services Section
-          SliverToBoxAdapter(
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 24),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text('My Services', style: AppTextStyles.h3),
-                      TextButton(
-                        onPressed: () {
-                          // TODO: Navigate to edit services
-                        },
-                        child: Text(
-                          'Edit',
-                          style: AppTextStyles.link,
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 16),
-                  const ServiceItem(
-                    title: 'Residential Electrical Service',
-                    price: '\$50/hr',
-                    description: 'Complete electrical solutions for homes',
-                  ),
-                  const ServiceItem(
-                    title: 'Emergency Repairs',
-                    price: '\$75/hr',
-                    description: '24/7 emergency electrical repair service',
-                  ),
-                  const ServiceItem(
-                    title: 'Installation Service',
-                    price: '\$60/hr',
-                    description: 'Installation of electrical equipment and fixtures',
-                  ),
-                ],
-              ),
-            ),
-          ),
-
-          // Reviews Section
-          SliverToBoxAdapter(
-            child: Padding(
-              padding: const EdgeInsets.all(24),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text('Reviews', style: AppTextStyles.h3),
-                      TextButton(
-                        onPressed: () {
-                          // TODO: Navigate to all reviews
-                        },
-                        child: Text(
-                          'See All',
-                          style: AppTextStyles.link,
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 16),
-                  const ReviewCard(
-                    customerName: 'John Smith',
-                    rating: 5,
-                    comment: 'Excellent service! Very professional and timely.',
-                    date: '2 days ago',
-                  ),
-                  const ReviewCard(
-                    customerName: 'Sarah Johnson',
-                    rating: 4,
-                    comment: 'Good work, would recommend.',
-                    date: '1 week ago',
-                  ),
-                ],
-              ),
-            ),
-          ),
-
-          // Account Settings Section
-          SliverToBoxAdapter(
-            child: Padding(
-              padding: const EdgeInsets.all(24),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text('Account Settings', style: AppTextStyles.h3),
-                  const SizedBox(height: 16),
-                  _buildSettingsButton(
-                    'Availability Schedule',
-                    Icons.calendar_today_outlined,
-                    () {
-                      // TODO: Navigate to availability settings
-                    },
-                  ),
-                  _buildSettingsButton(
-                    'Payment Information',
-                    Icons.payment_outlined,
-                    () {
-                      // TODO: Navigate to payment settings
-                    },
-                  ),
-                  _buildSettingsButton(
-                    'Notifications',
-                    Icons.notifications_outlined,
-                    () {
-                      // TODO: Navigate to notification settings
-                    },
-                  ),
-                  const SizedBox(height: 24),
-                  CustomButton(
-                    onPressed: () {
-                      // TODO: Handle sign out
-                    },
-                    text: 'Sign Out',
-                    type: ButtonType.secondary,
-                  ),
-                ],
-              ),
-            ),
-          ),
-
-          const SliverPadding(padding: EdgeInsets.only(bottom: 24)),
-        ],
-      ),
+        );
+      },
     );
   }
 
