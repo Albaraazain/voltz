@@ -9,6 +9,7 @@ import 'providers/database_provider.dart';
 import 'providers/electrician_provider.dart';
 import 'providers/homeowner_provider.dart';
 import 'providers/job_provider.dart';
+import 'providers/electrician_stats_provider.dart';
 import 'features/common/screens/splash_screen.dart';
 import 'features/homeowner/screens/homeowner_main_screen.dart';
 import 'features/electrician/screens/electrician_main_screen.dart';
@@ -123,6 +124,12 @@ class MyApp extends StatelessWidget {
           create: (_) {
             LoggerService.info('Initializing JobProvider');
             return JobProvider(SupabaseConfig.client);
+          },
+        ),
+        ChangeNotifierProvider(
+          create: (_) {
+            LoggerService.info('Initializing ElectricianStatsProvider');
+            return ElectricianStatsProvider(SupabaseConfig.client);
           },
         ),
       ],
