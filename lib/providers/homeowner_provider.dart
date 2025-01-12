@@ -23,4 +23,18 @@ class HomeownerProvider extends ChangeNotifier {
     _activeJobs.add(jobId);
     notifyListeners();
   }
+
+  // Job Management TODOs
+  // TODO: Add job creation wizard (Requires: Job creation system)
+  // TODO: Add job tracking and notifications (Requires: Notification system)
+  // TODO: Add job payment processing (Requires: Payment system)
+  // TODO: Add job review and rating system (Requires: Review system)
+  // TODO: Add job history and analytics (Requires: Analytics system)
+  // TODO: Add favorite electricians management (Requires: User preferences system)
+  // TODO: Add job scheduling system (Requires: Calendar system)
+  // TODO: Add emergency service requests (Requires: Emergency system)
+  // TODO: Add job cost estimation (Requires: Pricing engine)
+  // TODO: Add job verification system (Requires: Verification system)
+  // TODO: Add dispute resolution system (Requires: Support system)
+  // TODO: Add job chat system (Requires: Chat service)
 }
