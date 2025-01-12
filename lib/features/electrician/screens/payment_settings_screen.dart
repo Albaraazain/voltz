@@ -4,6 +4,7 @@ import '../../../core/constants/colors.dart';
 import '../../../core/constants/text_styles.dart';
 import '../../../providers/database_provider.dart';
 import '../../../models/electrician_model.dart';
+import '../../../models/payment_info_model.dart';
 import '../../common/widgets/custom_button.dart';
 import '../../common/widgets/custom_text_field.dart';
 
@@ -49,16 +50,7 @@ class _PaymentSettingsScreenState extends State<PaymentSettingsScreen> {
   }
 
   Future<void> _savePaymentInfo() async {
-    if (!_formKey.currentState!.validate()) return;
-
-    setState(() => _isLoading = true);
-
-    try {
-      final dbProvider = context.read<DatabaseProvider>();
-      final currentElectrician = dbProvider.electricians.firstWhere(
-        (e) => e.profile.id == dbProvider.currentProfile?.id,
-      );
-
+    if (_formKey.currentState!.validate()) {
       final paymentInfo = PaymentInfo(
         accountName: _accountNameController.text,
         accountNumber: _accountNumberController.text,
@@ -67,24 +59,21 @@ class _PaymentSettingsScreenState extends State<PaymentSettingsScreen> {
         accountType: _selectedAccountType,
       );
 
-      final updatedElectrician = currentElectrician.copyWith(
-        paymentInfo: paymentInfo,
-      );
-
-      await dbProvider.updateElectricianProfile(updatedElectrician);
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Payment information saved')),
-        );
+      try {
+        await context.read<DatabaseProvider>().updatePaymentInfo(paymentInfo);
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+                content: Text('Payment information saved successfully!')),
+          );
+        }
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Error saving payment information: $e')),
+          );
+        }
       }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Failed to save payment information')),
-        );
-      }
-    } finally {
-      if (mounted) setState(() => _isLoading = false);
     }
   }
 
