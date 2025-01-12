@@ -1,41 +1,75 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
-import '../core/utils/api_response.dart';
+import '../core/config/supabase_config.dart';
+import '../core/services/logger_service.dart';
 import '../models/review_model.dart';
 
 class ReviewRepository {
-  final SupabaseClient _client;
+  final SupabaseClient _client = SupabaseConfig.client;
 
-  ReviewRepository(this._client);
-
-  Future<ApiResponse<List<ReviewModel>>> getReviews(
-      String electricianId) async {
+  Future<List<Review>> getReviews({String? electricianId}) async {
     try {
-      final response = await _client
-          .from('reviews')
-          .select()
-          .eq('electrician_id', electricianId)
-          .order('timestamp', ascending: false);
+      final query = _client.from('reviews').select('''
+        *,
+        homeowner:homeowners (
+          id,
+          profile:profiles (
+            id,
+            email,
+            user_type,
+            name,
+            created_at,
+            last_login_at
+          )
+        ),
+        electrician:electricians (
+          id,
+          profile:profiles (
+            id,
+            email,
+            user_type,
+            name,
+            created_at,
+            last_login_at
+          )
+        )
+      ''');
 
-      final reviews =
-          (response as List).map((data) => ReviewModel.fromMap(data)).toList();
+      if (electricianId != null) {
+        query.eq('electrician_id', electricianId);
+      }
 
-      return ApiResponse.success(reviews);
-    } catch (error, stackTrace) {
-      return ApiResponse.error(error, stackTrace);
+      final response = await query.order('created_at', ascending: false);
+      return response.map((data) => Review.fromMap(data)).toList();
+    } catch (e, stackTrace) {
+      LoggerService.error('Failed to get reviews', e, stackTrace);
+      rethrow;
     }
   }
 
-  Future<ApiResponse<ReviewModel>> addReview(ReviewModel review) async {
+  Future<void> addReview(Review review) async {
     try {
-      final response = await _client
-          .from('reviews')
-          .insert(review.toMap())
-          .select()
-          .single();
+      await _client.from('reviews').insert(review.toMap());
+    } catch (e, stackTrace) {
+      LoggerService.error('Failed to add review', e, stackTrace);
+      rethrow;
+    }
+  }
 
-      return ApiResponse.success(ReviewModel.fromMap(response));
-    } catch (error, stackTrace) {
-      return ApiResponse.error(error, stackTrace);
+  Future<void> updateReview(Review review) async {
+    try {
+      await _client.from('reviews').update(review.toMap()).eq('id', review.id);
+    } catch (e, stackTrace) {
+      LoggerService.error('Failed to update review', e, stackTrace);
+      rethrow;
+    }
+  }
+
+  Future<void> deleteReview(String reviewId) async {
+    try {
+      await _client.from('reviews').delete().eq('id', reviewId);
+    } catch (e, stackTrace) {
+      LoggerService.error('Failed to delete review', e, stackTrace);
+      rethrow;
     }
   }
 }
