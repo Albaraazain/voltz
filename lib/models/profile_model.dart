@@ -6,7 +6,7 @@ class Profile {
   final DateTime createdAt;
   final DateTime? lastLoginAt;
 
-  Profile({
+  const Profile({
     required this.id,
     required this.email,
     required this.userType,
@@ -15,28 +15,28 @@ class Profile {
     this.lastLoginAt,
   });
 
-  factory Profile.fromMap(Map<String, dynamic> map) {
-    return Profile(
-      id: map['id'],
-      email: map['email'],
-      userType: map['user_type'],
-      name: map['name'],
-      createdAt: DateTime.parse(map['created_at']),
-      lastLoginAt: map['last_login_at'] != null
-          ? DateTime.parse(map['last_login_at'])
-          : null,
-    );
-  }
-
-  Map<String, dynamic> toMap() {
+  Map<String, dynamic> toJson() {
     return {
       'id': id,
       'email': email,
-      'user_type': userType,
+      'userType': userType,
       'name': name,
-      'created_at': createdAt.toIso8601String(),
-      'last_login_at': lastLoginAt?.toIso8601String(),
+      'createdAt': createdAt.toIso8601String(),
+      'lastLoginAt': lastLoginAt?.toIso8601String(),
     };
+  }
+
+  factory Profile.fromJson(Map<String, dynamic> json) {
+    return Profile(
+      id: json['id'] ?? '',
+      email: json['email'] ?? '',
+      userType: json['user_type'] ?? '',
+      name: json['name'] ?? '',
+      createdAt: DateTime.parse(json['created_at']),
+      lastLoginAt: json['last_login_at'] != null
+          ? DateTime.parse(json['last_login_at'])
+          : null,
+    );
   }
 
   Profile copyWith({
