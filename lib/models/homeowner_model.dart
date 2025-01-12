@@ -9,7 +9,7 @@ class Homeowner {
   final String? emergencyContact;
   final DateTime createdAt;
 
-  Homeowner({
+  const Homeowner({
     required this.id,
     required this.profile,
     this.phone,
@@ -19,48 +19,27 @@ class Homeowner {
     required this.createdAt,
   });
 
-  factory Homeowner.fromMap(Map<String, dynamic> map, {Profile? profile}) {
-    return Homeowner(
-      id: map['id'],
-      profile: profile ?? Profile.fromMap(map['profile']),
-      phone: map['phone'],
-      address: map['address'],
-      preferredContactMethod: map['preferred_contact_method'] ?? 'email',
-      emergencyContact: map['emergency_contact'],
-      createdAt: DateTime.parse(map['created_at']),
-    );
-  }
-
-  Map<String, dynamic> toMap() {
+  Map<String, dynamic> toJson() {
     return {
       'id': id,
-      'profile_id': profile.id,
+      'profile': profile.toJson(),
       'phone': phone,
       'address': address,
-      'preferred_contact_method': preferredContactMethod,
-      'emergency_contact': emergencyContact,
-      'created_at': createdAt.toIso8601String(),
+      'preferredContactMethod': preferredContactMethod,
+      'emergencyContact': emergencyContact,
+      'createdAt': createdAt.toIso8601String(),
     };
   }
 
-  Homeowner copyWith({
-    String? id,
-    Profile? profile,
-    String? phone,
-    String? address,
-    String? preferredContactMethod,
-    String? emergencyContact,
-    DateTime? createdAt,
-  }) {
+  factory Homeowner.fromJson(Map<String, dynamic> json) {
     return Homeowner(
-      id: id ?? this.id,
-      profile: profile ?? this.profile,
-      phone: phone ?? this.phone,
-      address: address ?? this.address,
-      preferredContactMethod:
-          preferredContactMethod ?? this.preferredContactMethod,
-      emergencyContact: emergencyContact ?? this.emergencyContact,
-      createdAt: createdAt ?? this.createdAt,
+      id: json['id'],
+      profile: Profile.fromJson(json['profile']),
+      phone: json['phone'],
+      address: json['address'],
+      preferredContactMethod: json['preferredContactMethod'],
+      emergencyContact: json['emergencyContact'],
+      createdAt: DateTime.parse(json['createdAt']),
     );
   }
 }
