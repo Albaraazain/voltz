@@ -2,6 +2,28 @@ import 'homeowner_model.dart';
 import 'electrician_model.dart';
 
 class Job {
+  // TODO: Add payment status tracking (Requires: Payment system implementation)
+  // TODO: Add job location and distance calculation (Requires: Location services)
+  // TODO: Add job completion verification fields (Requires: Job verification system)
+  // TODO: Add job timeline tracking (Requires: Progress tracking system)
+  // TODO: Add job materials and cost breakdown (Requires: Inventory system)
+  // TODO: Add job ratings and review fields (Requires: Review system)
+  // TODO: Add emergency status flag (Requires: Emergency handling system)
+  // TODO: Add job scheduling preferences (Requires: Scheduling system)
+
+  static const String STATUS_ACTIVE = 'active';
+  static const String STATUS_COMPLETED = 'completed';
+  static const String STATUS_CANCELLED = 'cancelled';
+  static const String STATUS_IN_PROGRESS = 'in_progress';
+  static const String STATUS_PENDING = 'pending';
+
+  // TODO: Add payment status constants (Requires: Payment system)
+  // TODO: Add verification status constants (Requires: Verification system)
+  // TODO: Add emergency status constants (Requires: Emergency system)
+
+  static const double MIN_PRICE = 20.0;
+  static const double MAX_PRICE = 10000.0;
+
   final String id;
   final String title;
   final String description;
@@ -76,5 +98,19 @@ class Job {
       price: price ?? this.price,
       createdAt: createdAt ?? this.createdAt,
     );
+  }
+
+  static bool isValidStatus(String status) {
+    return [
+      STATUS_ACTIVE,
+      STATUS_COMPLETED,
+      STATUS_CANCELLED,
+      STATUS_IN_PROGRESS,
+      STATUS_PENDING
+    ].contains(status);
+  }
+
+  static bool isValidPrice(double price) {
+    return price >= MIN_PRICE && price <= MAX_PRICE;
   }
 }
