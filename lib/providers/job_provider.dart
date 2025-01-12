@@ -6,15 +6,15 @@ import '../core/services/logger_service.dart';
 
 class JobProvider extends ChangeNotifier {
   final SupabaseClient _supabase;
-  ApiResponse<List<JobModel>> _jobs = ApiResponse.initial();
+  ApiResponse<List<Job>> _jobs = ApiResponse.initial();
 
   JobProvider(this._supabase);
 
-  ApiResponse<List<JobModel>> get jobs => _jobs;
+  ApiResponse<List<Job>> get jobs => _jobs;
   bool get isLoading => _jobs.status == ApiStatus.loading;
   dynamic get error => _jobs.error;
 
-  List<JobModel> getJobsByStatus(String status) {
+  List<Job> getJobsByStatus(String status) {
     if (!_jobs.hasData || _jobs.data == null) return [];
     return _jobs.data!.where((job) => job.status == status).toList();
   }
@@ -32,7 +32,7 @@ class JobProvider extends ChangeNotifier {
           .order('created_at', ascending: false);
 
       final jobsList =
-          (response as List).map((job) => JobModel.fromMap(job)).toList();
+          (response as List).map((job) => Job.fromJson(job)).toList();
 
       _jobs = ApiResponse.success(jobsList);
       LoggerService.debug('Loaded ${jobsList.length} jobs');
@@ -43,11 +43,11 @@ class JobProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<void> addJob(JobModel job) async {
+  Future<void> addJob(Job job) async {
     try {
       LoggerService.info('Adding new job: ${job.title}');
 
-      final jobData = job.toMap()
+      final jobData = job.toJson()
         ..remove('id')
         ..remove('created_at')
         ..remove('updated_at');
@@ -56,8 +56,8 @@ class JobProvider extends ChangeNotifier {
           await _supabase.from('jobs').insert(jobData).select().single();
 
       if (_jobs.hasData && _jobs.data != null) {
-        final updatedJobs = List<JobModel>.from(_jobs.data!)
-          ..insert(0, JobModel.fromMap(response));
+        final updatedJobs = List<Job>.from(_jobs.data!)
+          ..insert(0, Job.fromJson(response));
         _jobs = ApiResponse.success(updatedJobs);
         notifyListeners();
       }
