@@ -39,7 +39,7 @@ class ReviewRepository {
       }
 
       final response = await query.order('created_at', ascending: false);
-      return response.map((data) => Review.fromMap(data)).toList();
+      return response.map((data) => Review.fromJson(data)).toList();
     } catch (e, stackTrace) {
       LoggerService.error('Failed to get reviews', e, stackTrace);
       rethrow;
@@ -48,7 +48,7 @@ class ReviewRepository {
 
   Future<void> addReview(Review review) async {
     try {
-      await _client.from('reviews').insert(review.toMap());
+      await _client.from('reviews').insert(review.toJson());
     } catch (e, stackTrace) {
       LoggerService.error('Failed to add review', e, stackTrace);
       rethrow;
@@ -57,7 +57,7 @@ class ReviewRepository {
 
   Future<void> updateReview(Review review) async {
     try {
-      await _client.from('reviews').update(review.toMap()).eq('id', review.id);
+      await _client.from('reviews').update(review.toJson()).eq('id', review.id);
     } catch (e, stackTrace) {
       LoggerService.error('Failed to update review', e, stackTrace);
       rethrow;
