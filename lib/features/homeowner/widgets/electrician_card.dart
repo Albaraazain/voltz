@@ -9,6 +9,7 @@ class ElectricianCard extends StatelessWidget {
   final String price;
   final String distance;
   final String availability;
+  final bool isVerified;
 
   const ElectricianCard({
     super.key,
@@ -18,6 +19,7 @@ class ElectricianCard extends StatelessWidget {
     required this.price,
     required this.distance,
     required this.availability,
+    this.isVerified = false,
   });
 
   @override
@@ -62,6 +64,14 @@ class ElectricianCard extends StatelessWidget {
                             name,
                             style: AppTextStyles.h3,
                           ),
+                          if (isVerified) ...[
+                            const SizedBox(width: 4),
+                            const Icon(
+                              Icons.verified,
+                              size: 16,
+                              color: Colors.blue,
+                            ),
+                          ],
                           const Spacer(),
                           Row(
                             children: [
