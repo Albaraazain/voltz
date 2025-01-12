@@ -8,6 +8,20 @@ class JobProvider extends ChangeNotifier {
   final SupabaseClient _supabase;
   ApiResponse<List<Job>> _jobs = ApiResponse.initial();
 
+  // TODO: Add real-time job status updates (Requires: Supabase realtime subscription)
+  // TODO: Add job matching algorithm (Requires: AI/ML service integration)
+  // TODO: Add payment processing integration (Requires: Payment gateway)
+  // TODO: Add job verification system (Requires: Verification service)
+  // TODO: Add job scheduling system (Requires: Calendar service)
+  // TODO: Add emergency job handling (Requires: Emergency response system)
+  // TODO: Add job progress tracking (Requires: Progress tracking system)
+  // TODO: Add job chat/messaging system (Requires: Chat service)
+  // TODO: Add job location tracking (Requires: Location service)
+  // TODO: Add job cost estimation (Requires: Pricing engine)
+  // TODO: Add job materials management (Requires: Inventory system)
+  // TODO: Add job review system (Requires: Review service)
+  // TODO: Add dispute resolution system (Requires: Support system)
+
   JobProvider(this._supabase);
 
   ApiResponse<List<Job>> get jobs => _jobs;
