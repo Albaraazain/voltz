@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
-import 'package:timeago/timeago.dart' as timeago;
 import '../../../core/constants/colors.dart';
 import '../../../core/constants/text_styles.dart';
 import '../../../models/review_model.dart';
+import '../widgets/rating_stars.dart';
 
 class ReviewListItem extends StatelessWidget {
-  final ReviewModel review;
+  final Review review;
   final VoidCallback? onTap;
 
   const ReviewListItem({
@@ -18,15 +18,12 @@ class ReviewListItem extends StatelessWidget {
   Widget build(BuildContext context) {
     return InkWell(
       onTap: onTap,
+      borderRadius: BorderRadius.circular(12),
       child: Container(
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
           color: AppColors.surface,
-          borderRadius: BorderRadius.circular(8),
-          border: Border.all(
-            color: AppColors.border,
-            width: 1,
-          ),
+          borderRadius: BorderRadius.circular(12),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -35,12 +32,11 @@ class ReviewListItem extends StatelessWidget {
               children: [
                 CircleAvatar(
                   radius: 20,
-                  backgroundColor: AppColors.primary.withOpacity(0.1),
+                  backgroundColor: AppColors.primary,
                   child: Text(
-                    review.userName.substring(0, 1).toUpperCase(),
-                    style: AppTextStyles.bodyMedium.copyWith(
-                      color: AppColors.primary,
-                      fontWeight: FontWeight.w600,
+                    review.homeowner.profile.name[0].toUpperCase(),
+                    style: AppTextStyles.bodyLarge.copyWith(
+                      color: AppColors.surface,
                     ),
                   ),
                 ),
@@ -50,13 +46,11 @@ class ReviewListItem extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        review.userName,
-                        style: AppTextStyles.bodyMedium.copyWith(
-                          fontWeight: FontWeight.w600,
-                        ),
+                        review.homeowner.profile.name,
+                        style: AppTextStyles.bodyLarge,
                       ),
                       Text(
-                        timeago.format(review.timestamp),
+                        review.createdAt.toString(),
                         style: AppTextStyles.bodySmall.copyWith(
                           color: AppColors.textSecondary,
                         ),
@@ -64,49 +58,37 @@ class ReviewListItem extends StatelessWidget {
                     ],
                   ),
                 ),
-                Row(
-                  children: [
-                    Icon(
-                      Icons.star,
-                      color: AppColors.warning,
-                      size: 20,
-                    ),
-                    const SizedBox(width: 4),
-                    Text(
-                      review.rating.toString(),
-                      style: AppTextStyles.bodyMedium.copyWith(
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  ],
+                RatingStars(
+                  rating: review.rating.toDouble(),
+                  size: 16,
                 ),
               ],
             ),
-            if (review.comment?.isNotEmpty ?? false) ...[
+            if (review.comment.isNotEmpty) ...[
               const SizedBox(height: 12),
               Text(
-                review.comment!,
+                review.comment,
                 style: AppTextStyles.bodyMedium,
-                maxLines: 3,
+                maxLines: 2,
                 overflow: TextOverflow.ellipsis,
               ),
             ],
-            if (review.photos?.isNotEmpty ?? false) ...[
+            if (review.photos.isNotEmpty) ...[
               const SizedBox(height: 12),
               SizedBox(
-                height: 80,
+                height: 60,
                 child: ListView.separated(
                   scrollDirection: Axis.horizontal,
-                  itemCount: review.photos!.length,
+                  itemCount: review.photos.length,
                   separatorBuilder: (context, index) =>
                       const SizedBox(width: 8),
                   itemBuilder: (context, index) {
                     return ClipRRect(
                       borderRadius: BorderRadius.circular(8),
                       child: Image.network(
-                        review.photos![index],
-                        width: 80,
-                        height: 80,
+                        review.photos[index],
+                        width: 60,
+                        height: 60,
                         fit: BoxFit.cover,
                       ),
                     );
