@@ -4,6 +4,7 @@ import '../../../core/constants/colors.dart';
 import '../../../core/constants/text_styles.dart';
 import '../../../providers/job_provider.dart';
 import '../../../providers/database_provider.dart';
+import '../../../models/job_model.dart';
 import '../widgets/job_card.dart';
 
 class JobsScreen extends StatefulWidget {
@@ -63,16 +64,13 @@ class _JobsScreenState extends State<JobsScreen>
   }
 
   String _getStatusForTab(int tabIndex) {
-    // TODO: Move job status types to an enum or constants file
-    // TODO: Add support for custom status types based on business requirements
-    // Reference statuses kept for implementation:
     switch (tabIndex) {
       case 0:
-        return 'active'; // Reference status
+        return Job.STATUS_PENDING;
       case 1:
-        return 'scheduled'; // Reference status
+        return Job.STATUS_IN_PROGRESS;
       case 2:
-        return 'completed'; // Reference status
+        return Job.STATUS_COMPLETED;
       default:
         return '';
     }
@@ -80,6 +78,7 @@ class _JobsScreenState extends State<JobsScreen>
 
   @override
   Widget build(BuildContext context) {
+    super.build(context);
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
@@ -96,8 +95,8 @@ class _JobsScreenState extends State<JobsScreen>
           indicatorColor: AppColors.accent,
           indicatorSize: TabBarIndicatorSize.label,
           tabs: const [
-            Tab(text: 'Active'),
-            Tab(text: 'Scheduled'),
+            Tab(text: 'Pending'),
+            Tab(text: 'In Progress'),
             Tab(text: 'Completed'),
           ],
         ),
@@ -156,7 +155,7 @@ class _JobsScreenState extends State<JobsScreen>
                       ),
                       const SizedBox(height: 16),
                       Text(
-                        'No ${status.toLowerCase()} jobs',
+                        'No ${status.toLowerCase().replaceAll('_', ' ')} jobs',
                         style: AppTextStyles.bodyLarge.copyWith(
                           color: AppColors.textSecondary,
                         ),
@@ -174,7 +173,7 @@ class _JobsScreenState extends State<JobsScreen>
                   return Padding(
                     padding: const EdgeInsets.only(bottom: 16),
                     child: JobCard(
-                      jobType: status,
+                      jobType: status.toLowerCase().replaceAll('_', ' '),
                       jobTitle: job.title,
                       electricianName:
                           'Mike Johnson', // TODO: Get from electrician
