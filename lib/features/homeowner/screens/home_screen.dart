@@ -184,6 +184,7 @@ class _HomeownerHomeScreenState extends State<HomeownerHomeScreen> {
                               ? electrician.specialties[0]
                               : 'General Electrician',
                           jobsCompleted: electrician.jobsCompleted,
+                          isVerified: electrician.isVerified,
                         ),
                       );
                     },
