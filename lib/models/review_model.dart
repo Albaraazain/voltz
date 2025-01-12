@@ -1,80 +1,56 @@
 import 'package:flutter/material.dart';
 import 'homeowner_model.dart';
 import 'electrician_model.dart';
-import 'profile_model.dart';
+import 'job_model.dart';
 
 class Review {
   final String id;
-  final Electrician electrician;
   final Homeowner homeowner;
-  final String jobId;
+  final Electrician electrician;
+  final Job job;
   final int rating;
   final String comment;
   final List<String> photos;
-  final String? electricianReply;
-  final bool isVerified;
   final DateTime createdAt;
-  final DateTime updatedAt;
+  final String? electricianReply;
 
-  Review({
+  const Review({
     required this.id,
-    required this.electrician,
     required this.homeowner,
-    required this.jobId,
+    required this.electrician,
+    required this.job,
     required this.rating,
     required this.comment,
     this.photos = const [],
-    this.electricianReply,
-    this.isVerified = false,
     required this.createdAt,
-    required this.updatedAt,
+    this.electricianReply,
   });
 
-  factory Review.fromMap(Map<String, dynamic> map) {
-    final homeownerData = map['homeowner'] as Map<String, dynamic>;
-    final homeownerProfile =
-        Profile.fromMap(homeownerData['profile'] as Map<String, dynamic>);
-
-    final electricianData = map['electrician'] as Map<String, dynamic>;
-    final electricianProfile =
-        Profile.fromMap(electricianData['profile'] as Map<String, dynamic>);
-
-    return Review(
-      id: map['id'] as String,
-      electrician: Electrician.fromMap(
-        electricianData,
-        profile: electricianProfile,
-      ),
-      homeowner: Homeowner.fromMap(
-        homeownerData,
-        profile: homeownerProfile,
-      ),
-      jobId: map['job_id'] as String,
-      rating: map['rating'] as int,
-      comment: map['comment'] as String,
-      photos:
-          (map['photos'] as List<dynamic>?)?.map((e) => e as String).toList() ??
-              [],
-      electricianReply: map['electrician_reply'] as String?,
-      isVerified: map['is_verified'] as bool? ?? false,
-      createdAt: DateTime.parse(map['created_at'] as String),
-      updatedAt: DateTime.parse(map['updated_at'] as String),
-    );
-  }
-
-  Map<String, dynamic> toMap() {
+  Map<String, dynamic> toJson() {
     return {
       'id': id,
-      'electrician_id': electrician.id,
-      'homeowner_id': homeowner.id,
-      'job_id': jobId,
+      'homeowner': homeowner.toJson(),
+      'electrician': electrician.toJson(),
+      'job': job.toJson(),
       'rating': rating,
       'comment': comment,
       'photos': photos,
-      'electrician_reply': electricianReply,
-      'is_verified': isVerified,
-      'created_at': createdAt.toIso8601String(),
-      'updated_at': updatedAt.toIso8601String(),
+      'createdAt': createdAt.toIso8601String(),
+      'electricianReply': electricianReply,
     };
+  }
+
+  factory Review.fromJson(Map<String, dynamic> json) {
+    return Review(
+      id: json['id'],
+      homeowner: Homeowner.fromJson(json['homeowner']),
+      electrician: Electrician.fromJson(json['electrician']),
+      job: Job.fromJson(json['job']),
+      rating: json['rating'],
+      comment: json['comment'],
+      photos: List<String>.from(json['photos']),
+      createdAt: DateTime.parse(json['createdAt']),
+      electricianReply: json['electricianReply'],
+    );
   }
 }
