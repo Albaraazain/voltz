@@ -8,6 +8,10 @@ import '../widgets/profile_menu_item.dart';
 import 'personal_info_screen.dart';
 import 'address_screen.dart';
 import 'contact_preference_screen.dart';
+import 'payment_methods_screen.dart';
+import 'notifications_screen.dart';
+import 'help_center_screen.dart';
+import 'terms_privacy_screen.dart';
 
 class ProfileScreen extends StatelessWidget {
   const ProfileScreen({super.key});
@@ -119,10 +123,11 @@ class ProfileScreen extends StatelessWidget {
                         icon: Icons.payment_outlined,
                         title: 'Payment Methods',
                         onTap: () {
-                          // TODO: Implement payment methods screen
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              content: Text('Coming soon!'),
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) =>
+                                  const PaymentMethodsScreen(),
                             ),
                           );
                         },
@@ -137,10 +142,10 @@ class ProfileScreen extends StatelessWidget {
                         icon: Icons.notifications_outlined,
                         title: 'Notifications',
                         onTap: () {
-                          // TODO: Implement notifications screen
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              content: Text('Coming soon!'),
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => const NotificationsScreen(),
                             ),
                           );
                         },
@@ -170,10 +175,10 @@ class ProfileScreen extends StatelessWidget {
                         icon: Icons.help_outline,
                         title: 'Help Center',
                         onTap: () {
-                          // TODO: Implement help center
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              content: Text('Coming soon!'),
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => const HelpCenterScreen(),
                             ),
                           );
                         },
@@ -182,10 +187,10 @@ class ProfileScreen extends StatelessWidget {
                         icon: Icons.policy_outlined,
                         title: 'Terms & Privacy Policy',
                         onTap: () {
-                          // TODO: Implement terms and privacy
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              content: Text('Coming soon!'),
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => const TermsPrivacyScreen(),
                             ),
                           );
                         },
