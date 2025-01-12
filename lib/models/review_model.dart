@@ -1,75 +1,80 @@
-class ReviewModel {
-  final String id;
-  final String userId;
-  final String userName;
-  final String electricianId;
-  final double rating;
-  final String? comment;
-  final DateTime timestamp;
-  final List<String>? photos;
-  final String? electricianReply;
+import 'package:flutter/material.dart';
+import 'homeowner_model.dart';
+import 'electrician_model.dart';
+import 'profile_model.dart';
 
-  ReviewModel({
+class Review {
+  final String id;
+  final Electrician electrician;
+  final Homeowner homeowner;
+  final String jobId;
+  final int rating;
+  final String comment;
+  final List<String> photos;
+  final String? electricianReply;
+  final bool isVerified;
+  final DateTime createdAt;
+  final DateTime updatedAt;
+
+  Review({
     required this.id,
-    required this.userId,
-    required this.userName,
-    required this.electricianId,
+    required this.electrician,
+    required this.homeowner,
+    required this.jobId,
     required this.rating,
-    this.comment,
-    required this.timestamp,
-    this.photos,
+    required this.comment,
+    this.photos = const [],
     this.electricianReply,
+    this.isVerified = false,
+    required this.createdAt,
+    required this.updatedAt,
   });
 
-  factory ReviewModel.fromMap(Map<String, dynamic> map) {
-    return ReviewModel(
+  factory Review.fromMap(Map<String, dynamic> map) {
+    final homeownerData = map['homeowner'] as Map<String, dynamic>;
+    final homeownerProfile =
+        Profile.fromMap(homeownerData['profile'] as Map<String, dynamic>);
+
+    final electricianData = map['electrician'] as Map<String, dynamic>;
+    final electricianProfile =
+        Profile.fromMap(electricianData['profile'] as Map<String, dynamic>);
+
+    return Review(
       id: map['id'] as String,
-      userId: map['user_id'] as String,
-      userName: map['user_name'] as String,
-      electricianId: map['electrician_id'] as String,
-      rating: (map['rating'] as num).toDouble(),
-      comment: map['comment'] as String?,
-      timestamp: DateTime.parse(map['timestamp'] as String),
-      photos: map['photos'] != null ? List<String>.from(map['photos']) : null,
+      electrician: Electrician.fromMap(
+        electricianData,
+        profile: electricianProfile,
+      ),
+      homeowner: Homeowner.fromMap(
+        homeownerData,
+        profile: homeownerProfile,
+      ),
+      jobId: map['job_id'] as String,
+      rating: map['rating'] as int,
+      comment: map['comment'] as String,
+      photos:
+          (map['photos'] as List<dynamic>?)?.map((e) => e as String).toList() ??
+              [],
       electricianReply: map['electrician_reply'] as String?,
+      isVerified: map['is_verified'] as bool? ?? false,
+      createdAt: DateTime.parse(map['created_at'] as String),
+      updatedAt: DateTime.parse(map['updated_at'] as String),
     );
   }
 
   Map<String, dynamic> toMap() {
     return {
       'id': id,
-      'user_id': userId,
-      'user_name': userName,
-      'electrician_id': electricianId,
+      'electrician_id': electrician.id,
+      'homeowner_id': homeowner.id,
+      'job_id': jobId,
       'rating': rating,
       'comment': comment,
-      'timestamp': timestamp.toIso8601String(),
       'photos': photos,
       'electrician_reply': electricianReply,
+      'is_verified': isVerified,
+      'created_at': createdAt.toIso8601String(),
+      'updated_at': updatedAt.toIso8601String(),
     };
-  }
-
-  ReviewModel copyWith({
-    String? id,
-    String? userId,
-    String? userName,
-    String? electricianId,
-    double? rating,
-    String? comment,
-    DateTime? timestamp,
-    List<String>? photos,
-    String? electricianReply,
-  }) {
-    return ReviewModel(
-      id: id ?? this.id,
-      userId: userId ?? this.userId,
-      userName: userName ?? this.userName,
-      electricianId: electricianId ?? this.electricianId,
-      rating: rating ?? this.rating,
-      comment: comment ?? this.comment,
-      timestamp: timestamp ?? this.timestamp,
-      photos: photos ?? this.photos,
-      electricianReply: electricianReply ?? this.electricianReply,
-    );
   }
 }
