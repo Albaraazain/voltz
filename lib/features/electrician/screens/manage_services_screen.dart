@@ -4,6 +4,7 @@ import '../../../core/constants/colors.dart';
 import '../../../core/constants/text_styles.dart';
 import '../../../providers/database_provider.dart';
 import '../../../models/electrician_model.dart';
+import '../../../models/service_model.dart';
 import '../../common/widgets/custom_button.dart';
 import '../../common/widgets/custom_text_field.dart';
 
@@ -28,22 +29,32 @@ class _ManageServicesScreenState extends State<ManageServicesScreen> {
     super.dispose();
   }
 
-  void _addService() {
-    if (!_formKey.currentState!.validate()) return;
+  Future<void> _addService() async {
+    if (_formKey.currentState!.validate()) {
+      final service = Service(
+        title: _titleController.text,
+        description: _descriptionController.text,
+        price: double.parse(_priceController.text),
+      );
 
-    final service = Service(
-      title: _titleController.text,
-      description: _descriptionController.text,
-      price: double.parse(_priceController.text),
-    );
-
-    // Add service using provider
-    context.read<DatabaseProvider>().addElectricianService(service);
-
-    // Clear form
-    _titleController.clear();
-    _descriptionController.clear();
-    _priceController.clear();
+      try {
+        await context.read<DatabaseProvider>().addElectricianService(service);
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Service added successfully!')),
+          );
+          _titleController.clear();
+          _descriptionController.clear();
+          _priceController.clear();
+        }
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Error adding service: $e')),
+          );
+        }
+      }
+    }
   }
 
   @override
