@@ -18,7 +18,7 @@ class NotificationItem extends StatelessWidget {
   Widget build(BuildContext context) {
     return InkWell(
       onTap: () {
-        if (!notification.isRead) {
+        if (!notification.read) {
           // Mark as read
         }
         onTap?.call();
@@ -26,7 +26,7 @@ class NotificationItem extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: notification.isRead
+          color: notification.read
               ? AppColors.surface
               : AppColors.accent.withOpacity(0.1),
           borderRadius: BorderRadius.circular(8),
@@ -74,8 +74,8 @@ class NotificationItem extends StatelessWidget {
   }
 
   Widget _buildIcon() {
-    IconData icon;
-    Color color;
+    late IconData icon;
+    late Color color;
 
     switch (notification.type) {
       case NotificationType.jobRequest:
@@ -102,6 +102,14 @@ class NotificationItem extends StatelessWidget {
       case NotificationType.review:
         icon = Icons.star_outline;
         color = AppColors.warning;
+        break;
+      case NotificationType.payment:
+        icon = Icons.payment_outlined;
+        color = AppColors.success;
+        break;
+      case NotificationType.system:
+        icon = Icons.info_outline;
+        color = AppColors.textSecondary;
         break;
     }
 
