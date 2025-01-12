@@ -18,8 +18,12 @@ class ReviewDetailsScreen extends StatelessWidget {
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
-        title: const Text('Review Details'),
-        backgroundColor: AppColors.primary,
+        backgroundColor: AppColors.surface,
+        title: Text(
+          'Review Details',
+          style: AppTextStyles.h2,
+        ),
+        elevation: 0,
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(24),
@@ -30,11 +34,13 @@ class ReviewDetailsScreen extends StatelessWidget {
             Row(
               children: [
                 CircleAvatar(
-                  radius: 24,
-                  backgroundColor: AppColors.surface,
+                  radius: 30,
+                  backgroundColor: AppColors.primary,
                   child: Text(
                     review.homeowner.profile.name[0].toUpperCase(),
-                    style: AppTextStyles.h3,
+                    style: AppTextStyles.h3.copyWith(
+                      color: AppColors.accent,
+                    ),
                   ),
                 ),
                 const SizedBox(width: 16),
@@ -68,36 +74,81 @@ class ReviewDetailsScreen extends StatelessWidget {
             ),
             if (review.photos.isNotEmpty) ...[
               const SizedBox(height: 24),
+              Text(
+                'Photos',
+                style: AppTextStyles.h3,
+              ),
+              const SizedBox(height: 16),
               PhotoGallery(photos: review.photos),
             ],
 
-            if (review.electricianReply != null) ...[
-              const SizedBox(height: 24),
-              Container(
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: AppColors.surface,
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Electrician\'s Reply',
-                      style: AppTextStyles.h3,
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      review.electricianReply!,
-                      style: AppTextStyles.bodyLarge,
-                    ),
-                  ],
-                ),
+            const SizedBox(height: 24),
+            // Job Details
+            Text(
+              'Job Details',
+              style: AppTextStyles.h3,
+            ),
+            const SizedBox(height: 16),
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: AppColors.surface,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: AppColors.border),
               ),
-            ],
+              child: Column(
+                children: [
+                  _buildJobDetail(
+                    'Service Type',
+                    review.job.title,
+                    Icons.work_outline,
+                  ),
+                  const Divider(height: 24),
+                  _buildJobDetail(
+                    'Date',
+                    review.job.date.toString(),
+                    Icons.calendar_today_outlined,
+                  ),
+                  const Divider(height: 24),
+                  _buildJobDetail(
+                    'Amount',
+                    '\$${review.job.price.toStringAsFixed(2)}',
+                    Icons.attach_money,
+                  ),
+                ],
+              ),
+            ),
           ],
         ),
       ),
+    );
+  }
+
+  Widget _buildJobDetail(String label, String value, IconData icon) {
+    return Row(
+      children: [
+        Icon(
+          icon,
+          size: 20,
+          color: AppColors.accent,
+        ),
+        const SizedBox(width: 12),
+        Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              label,
+              style: AppTextStyles.bodySmall.copyWith(
+                color: AppColors.textSecondary,
+              ),
+            ),
+            Text(
+              value,
+              style: AppTextStyles.bodyMedium,
+            ),
+          ],
+        ),
+      ],
     );
   }
 }
