@@ -41,19 +41,26 @@ class EarningsChart extends StatelessWidget {
 
         final stats = provider.stats.data!;
         final period = provider.selectedPeriod;
+
+        // Calculate maxY with a minimum value of 100
         final maxY = stats.earningsData.isEmpty
             ? 100.0
             : (stats.earningsData
                     .map((e) => e.value)
                     .reduce((max, value) => value > max ? value : max)) *
                 1.2;
+        final adjustedMaxY = maxY < 100 ? 100.0 : maxY;
+
+        // Ensure interval is never zero by using a minimum value
+        final horizontalInterval =
+            (adjustedMaxY / 4).clamp(25.0, double.infinity);
 
         return LineChart(
           LineChartData(
             gridData: FlGridData(
               show: true,
               drawVerticalLine: true,
-              horizontalInterval: maxY / 4,
+              horizontalInterval: horizontalInterval,
               verticalInterval: 1,
               getDrawingHorizontalLine: (value) {
                 return FlLine(
@@ -94,7 +101,7 @@ class EarningsChart extends StatelessWidget {
               leftTitles: AxisTitles(
                 sideTitles: SideTitles(
                   showTitles: true,
-                  interval: maxY / 4,
+                  interval: horizontalInterval,
                   reservedSize: 40,
                   getTitlesWidget: (value, meta) {
                     return Text(
@@ -112,7 +119,7 @@ class EarningsChart extends StatelessWidget {
             minX: 0,
             maxX: stats.earningsData.length - 1.0,
             minY: 0,
-            maxY: maxY,
+            maxY: adjustedMaxY,
             lineBarsData: [
               LineChartBarData(
                 spots: List.generate(
