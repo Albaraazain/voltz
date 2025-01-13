@@ -484,13 +484,24 @@ class DatabaseProvider with ChangeNotifier {
         throw Exception('User not authenticated');
 
       // Update profile first
-      await updateProfile(electrician.profile);
+      await _client.from('profiles').update({
+        'name': electrician.profile.name,
+        'email': electrician.profile.email,
+        'user_type': electrician.profile.userType,
+      }).eq('id', electrician.profile.id);
 
       // Update electrician data with only the fields that exist in the database
       await _client.from('electricians').update({
+        'profile_id': electrician.profile.id,
+        'rating': electrician.rating,
+        'jobs_completed': electrician.jobsCompleted,
         'hourly_rate': electrician.hourlyRate,
         'profile_image': electrician.profileImage,
         'is_available': electrician.isAvailable,
+        'specialties': electrician.specialties,
+        'license_number': electrician.licenseNumber,
+        'years_of_experience': electrician.yearsOfExperience,
+        'is_verified': electrician.isVerified,
       }).eq('id', electrician.id);
 
       // Update local list if the electrician exists in it
