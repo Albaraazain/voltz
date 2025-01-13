@@ -101,13 +101,25 @@ class ElectricianProvider extends ChangeNotifier {
       notifyListeners();
 
       final electricianId = _getCurrentElectricianId();
-      final response = await _client
-          .from('services')
-          .select()
-          .eq('electrician_id', electricianId)
-          .order('title', ascending: true);
+      LoggerService.info('Loading services for electrician: $electricianId');
 
-      _services = response.map((service) => Service.fromJson(service)).toList();
+      final response = await _client
+          .from('electricians')
+          .select('services')
+          .eq('id', electricianId)
+          .single();
+
+      LoggerService.debug('Services response: ${response['services']}');
+
+      if (response['services'] != null) {
+        _services = (response['services'] as List)
+            .map((service) => Service.fromJson(service))
+            .toList();
+        LoggerService.info('Loaded ${_services.length} services');
+      } else {
+        _services = [];
+        LoggerService.info('No services found');
+      }
 
       _isLoading = false;
       notifyListeners();
@@ -125,13 +137,25 @@ class ElectricianProvider extends ChangeNotifier {
       notifyListeners();
 
       final electricianId = _getCurrentElectricianId();
+      LoggerService.info(
+          'Loading working hours for electrician: $electricianId');
+
       final response = await _client
-          .from('working_hours')
-          .select()
-          .eq('electrician_id', electricianId)
+          .from('electricians')
+          .select('working_hours')
+          .eq('id', electricianId)
           .single();
 
-      _workingHours = WorkingHours.fromJson(response);
+      LoggerService.debug(
+          'Working hours response: ${response['working_hours']}');
+
+      if (response['working_hours'] != null) {
+        _workingHours = WorkingHours.fromJson(response['working_hours']);
+        LoggerService.info('Working hours loaded successfully');
+      } else {
+        _workingHours = const WorkingHours();
+        LoggerService.info('No working hours found, using defaults');
+      }
 
       _isLoading = false;
       notifyListeners();
@@ -173,20 +197,30 @@ class ElectricianProvider extends ChangeNotifier {
   Future<void> addService(Service service) async {
     try {
       final electricianId = _getCurrentElectricianId();
-      final response = await _client
-          .from('services')
-          .insert({
-            'title': service.title,
-            'description': service.description,
-            'price': service.price,
-            'electrician_id': electricianId,
-          })
-          .select()
-          .single();
+      LoggerService.info('Adding service for electrician: $electricianId');
+      LoggerService.debug('Service details: ${service.toJson()}');
 
-      final newService = Service.fromJson(response);
-      _services.add(newService);
+      // Generate a unique ID for the service
+      final newService = service.copyWith(
+        id: DateTime.now().millisecondsSinceEpoch.toString(),
+      );
+
+      // Get current services and add the new one
+      final updatedServices = [..._services, newService];
+      LoggerService.debug(
+          'Updated services: ${updatedServices.map((s) => s.toJson()).toList()}');
+
+      // Update the services column
+      await _client.from('electricians').update({
+        'services': updatedServices.map((s) => s.toJson()).toList(),
+      }).eq('id', electricianId);
+
+      _services = updatedServices;
+      LoggerService.info('Service added successfully');
       notifyListeners();
+
+      // Refresh the database provider to update the UI
+      await _databaseProvider.loadElectricians();
     } catch (e) {
       LoggerService.error('Failed to add service', e);
       rethrow;
@@ -195,17 +229,23 @@ class ElectricianProvider extends ChangeNotifier {
 
   Future<void> updateService(Service service) async {
     try {
-      await _client.from('services').update({
-        'title': service.title,
-        'description': service.description,
-        'price': service.price,
-      }).eq('id', service.id);
+      final electricianId = _getCurrentElectricianId();
 
-      final index = _services.indexWhere((s) => s.id == service.id);
-      if (index != -1) {
-        _services[index] = service;
-        notifyListeners();
-      }
+      // Update the service in the list
+      final updatedServices = _services.map((s) {
+        if (s.id == service.id) {
+          return service;
+        }
+        return s;
+      }).toList();
+
+      // Update the services column
+      await _client.from('electricians').update({
+        'services': updatedServices.map((s) => s.toJson()).toList(),
+      }).eq('id', electricianId);
+
+      _services = updatedServices;
+      notifyListeners();
     } catch (e) {
       LoggerService.error('Failed to update service', e);
       rethrow;
@@ -214,9 +254,18 @@ class ElectricianProvider extends ChangeNotifier {
 
   Future<void> deleteService(String serviceId) async {
     try {
-      await _client.from('services').delete().eq('id', serviceId);
+      final electricianId = _getCurrentElectricianId();
 
-      _services.removeWhere((s) => s.id == serviceId);
+      // Remove the service from the list
+      final updatedServices =
+          _services.where((s) => s.id != serviceId).toList();
+
+      // Update the services column
+      await _client.from('electricians').update({
+        'services': updatedServices.map((s) => s.toJson()).toList(),
+      }).eq('id', electricianId);
+
+      _services = updatedServices;
       notifyListeners();
     } catch (e) {
       LoggerService.error('Failed to delete service', e);
