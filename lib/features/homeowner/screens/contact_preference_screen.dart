@@ -5,6 +5,9 @@ import '../../../core/constants/text_styles.dart';
 import '../../../providers/database_provider.dart';
 import '../../../widgets/primary_button.dart';
 
+// Define valid contact methods to match database enum
+const validContactMethods = ['email', 'phone', 'sms'];
+
 class ContactPreferenceScreen extends StatefulWidget {
   const ContactPreferenceScreen({super.key});
 
@@ -22,7 +25,9 @@ class _ContactPreferenceScreenState extends State<ContactPreferenceScreen> {
     super.initState();
     final homeowner = context.read<DatabaseProvider>().currentHomeowner;
     if (homeowner != null) {
-      _selectedMethod = homeowner.preferredContactMethod;
+      final method = homeowner.preferredContactMethod;
+      // Ensure we only use valid enum values
+      _selectedMethod = validContactMethods.contains(method) ? method : 'email';
     }
   }
 
@@ -30,8 +35,8 @@ class _ContactPreferenceScreenState extends State<ContactPreferenceScreen> {
     setState(() => _isLoading = true);
 
     try {
-      // TODO: Implement save contact preference in DatabaseProvider
-      // await context.read<DatabaseProvider>().updateContactPreference(_selectedMethod);
+      final databaseProvider = context.read<DatabaseProvider>();
+      await databaseProvider.updateHomeownerContactPreference(_selectedMethod);
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
