@@ -898,4 +898,156 @@ class DatabaseProvider with ChangeNotifier {
       rethrow;
     }
   }
+
+  Future<void> updateHomeownerNotificationPreferences({
+    required bool jobUpdates,
+    required bool messages,
+    required bool payments,
+    required bool promotions,
+  }) async {
+    try {
+      if (_currentHomeowner == null) {
+        throw Exception('No homeowner logged in');
+      }
+
+      await _client.from('homeowners').update({
+        'notification_job_updates': jobUpdates,
+        'notification_messages': messages,
+        'notification_payments': payments,
+        'notification_promotions': promotions,
+      }).eq('id', _currentHomeowner!.id);
+
+      // Update local state
+      _currentHomeowner = Homeowner(
+        id: _currentHomeowner!.id,
+        profile: _currentHomeowner!.profile,
+        phone: _currentHomeowner!.phone,
+        address: _currentHomeowner!.address,
+        preferredContactMethod: _currentHomeowner!.preferredContactMethod,
+        emergencyContact: _currentHomeowner!.emergencyContact,
+        createdAt: _currentHomeowner!.createdAt,
+        notificationJobUpdates: jobUpdates,
+        notificationMessages: messages,
+        notificationPayments: payments,
+        notificationPromotions: promotions,
+      );
+
+      notifyListeners();
+    } catch (e) {
+      rethrow;
+    }
+  }
+
+  Future<void> updateHomeownerContactPreference(String method) async {
+    try {
+      if (_currentHomeowner == null) {
+        throw Exception('No homeowner logged in');
+      }
+
+      await _client.from('homeowners').update({
+        'preferred_contact_method': method,
+      }).eq('id', _currentHomeowner!.id);
+
+      // Update local state
+      _currentHomeowner = Homeowner(
+        id: _currentHomeowner!.id,
+        profile: _currentHomeowner!.profile,
+        phone: _currentHomeowner!.phone,
+        address: _currentHomeowner!.address,
+        preferredContactMethod: method,
+        emergencyContact: _currentHomeowner!.emergencyContact,
+        createdAt: _currentHomeowner!.createdAt,
+        notificationJobUpdates: _currentHomeowner!.notificationJobUpdates,
+        notificationMessages: _currentHomeowner!.notificationMessages,
+        notificationPayments: _currentHomeowner!.notificationPayments,
+        notificationPromotions: _currentHomeowner!.notificationPromotions,
+      );
+
+      notifyListeners();
+    } catch (e) {
+      rethrow;
+    }
+  }
+
+  Future<void> updateHomeownerPersonalInfo({
+    required String name,
+    required String phone,
+    required String emergencyContact,
+  }) async {
+    try {
+      if (_currentHomeowner == null) {
+        throw Exception('No homeowner logged in');
+      }
+
+      // Update profile name
+      await _client.from('profiles').update({
+        'name': name,
+      }).eq('id', _currentProfile!.id);
+
+      // Update homeowner phone and emergency contact
+      await _client.from('homeowners').update({
+        'phone': phone,
+        'emergency_contact': emergencyContact,
+      }).eq('id', _currentHomeowner!.id);
+
+      // Update local profile state
+      _currentProfile = Profile(
+        id: _currentProfile!.id,
+        email: _currentProfile!.email,
+        userType: _currentProfile!.userType,
+        name: name,
+        createdAt: _currentProfile!.createdAt,
+      );
+
+      // Update local homeowner state
+      _currentHomeowner = Homeowner(
+        id: _currentHomeowner!.id,
+        profile: _currentProfile!,
+        phone: phone,
+        address: _currentHomeowner!.address,
+        preferredContactMethod: _currentHomeowner!.preferredContactMethod,
+        emergencyContact: emergencyContact,
+        createdAt: _currentHomeowner!.createdAt,
+        notificationJobUpdates: _currentHomeowner!.notificationJobUpdates,
+        notificationMessages: _currentHomeowner!.notificationMessages,
+        notificationPayments: _currentHomeowner!.notificationPayments,
+        notificationPromotions: _currentHomeowner!.notificationPromotions,
+      );
+
+      notifyListeners();
+    } catch (e) {
+      rethrow;
+    }
+  }
+
+  Future<void> updateHomeownerAddress(String address) async {
+    try {
+      if (_currentHomeowner == null) {
+        throw Exception('No homeowner logged in');
+      }
+
+      await _client.from('homeowners').update({
+        'address': address,
+      }).eq('id', _currentHomeowner!.id);
+
+      // Update local state
+      _currentHomeowner = Homeowner(
+        id: _currentHomeowner!.id,
+        profile: _currentHomeowner!.profile,
+        phone: _currentHomeowner!.phone,
+        address: address,
+        preferredContactMethod: _currentHomeowner!.preferredContactMethod,
+        emergencyContact: _currentHomeowner!.emergencyContact,
+        createdAt: _currentHomeowner!.createdAt,
+        notificationJobUpdates: _currentHomeowner!.notificationJobUpdates,
+        notificationMessages: _currentHomeowner!.notificationMessages,
+        notificationPayments: _currentHomeowner!.notificationPayments,
+        notificationPromotions: _currentHomeowner!.notificationPromotions,
+      );
+
+      notifyListeners();
+    } catch (e) {
+      rethrow;
+    }
+  }
 }
