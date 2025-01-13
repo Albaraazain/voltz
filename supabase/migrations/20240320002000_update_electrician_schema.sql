@@ -29,7 +29,7 @@ CREATE POLICY "Allow users to upload their own profile images"
 ON storage.objects FOR INSERT
 WITH CHECK (
   bucket_id = 'profile_images' AND
-  auth.uid()::text = (storage.foldername(name))[1]
+  auth.uid()::uuid::text = (storage.foldername(name))[1]
 );
 
 CREATE POLICY "Allow public viewing of profile images"
@@ -48,22 +48,14 @@ ALTER TABLE electricians ENABLE ROW LEVEL SECURITY;
 -- Allow read access to verified electricians
 CREATE POLICY "Read verified electricians"
 ON electricians FOR SELECT
-USING (is_verified = true OR auth.uid()::text = profile_id);
+USING (is_verified = true OR auth.uid()::uuid = profile_id);
 
 -- Allow electricians to update their own profiles
 CREATE POLICY "Update own profile"
 ON electricians FOR UPDATE
-USING (auth.uid()::text = profile_id);
-
--- Allow electricians to update their own availability
-CREATE POLICY "Update own availability"
-ON electricians FOR UPDATE
-USING (auth.uid()::text = profile_id)
+USING (auth.uid()::uuid = profile_id)
 WITH CHECK (
-  -- Only allow updating specific columns
-  (
-    OLD.id = NEW.id AND
-    OLD.profile_id = NEW.profile_id AND
-    OLD.is_verified = NEW.is_verified
-  )
+  -- Only allow updating non-sensitive fields
+  auth.uid()::uuid = profile_id AND
+  is_verified IS NOT DISTINCT FROM is_verified
 ); 
