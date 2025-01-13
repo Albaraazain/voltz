@@ -1,83 +1,89 @@
 import 'package:flutter/material.dart';
 
 class WorkingHours {
-  final List<bool> workingDays;
-  final TimeOfDay startTime;
-  final TimeOfDay endTime;
-  final bool hasBreak;
-  final TimeOfDay breakStartTime;
-  final TimeOfDay breakEndTime;
+  final Map<String, DaySchedule?> schedule;
 
   const WorkingHours({
-    this.workingDays = const [true, true, true, true, true, false, false],
-    this.startTime = const TimeOfDay(hour: 9, minute: 0),
-    this.endTime = const TimeOfDay(hour: 17, minute: 0),
-    this.hasBreak = true,
-    this.breakStartTime = const TimeOfDay(hour: 12, minute: 0),
-    this.breakEndTime = const TimeOfDay(hour: 13, minute: 0),
+    this.schedule = const {
+      'monday': DaySchedule(start: '09:00', end: '17:00'),
+      'tuesday': DaySchedule(start: '09:00', end: '17:00'),
+      'wednesday': DaySchedule(start: '09:00', end: '17:00'),
+      'thursday': DaySchedule(start: '09:00', end: '17:00'),
+      'friday': DaySchedule(start: '09:00', end: '17:00'),
+      'saturday': null,
+      'sunday': null,
+    },
   });
 
   WorkingHours copyWith({
-    List<bool>? workingDays,
-    TimeOfDay? startTime,
-    TimeOfDay? endTime,
-    bool? hasBreak,
-    TimeOfDay? breakStartTime,
-    TimeOfDay? breakEndTime,
+    Map<String, DaySchedule?>? schedule,
   }) {
     return WorkingHours(
-      workingDays: workingDays ?? this.workingDays,
-      startTime: startTime ?? this.startTime,
-      endTime: endTime ?? this.endTime,
-      hasBreak: hasBreak ?? this.hasBreak,
-      breakStartTime: breakStartTime ?? this.breakStartTime,
-      breakEndTime: breakEndTime ?? this.breakEndTime,
+      schedule: schedule ?? this.schedule,
     );
   }
 
   Map<String, dynamic> toJson() {
     return {
-      'workingDays': workingDays,
-      'startTime': {
-        'hour': startTime.hour,
-        'minute': startTime.minute,
-      },
-      'endTime': {
-        'hour': endTime.hour,
-        'minute': endTime.minute,
-      },
-      'hasBreak': hasBreak,
-      'breakStartTime': {
-        'hour': breakStartTime.hour,
-        'minute': breakStartTime.minute,
-      },
-      'breakEndTime': {
-        'hour': breakEndTime.hour,
-        'minute': breakEndTime.minute,
-      },
+      'monday': schedule['monday']?.toJson(),
+      'tuesday': schedule['tuesday']?.toJson(),
+      'wednesday': schedule['wednesday']?.toJson(),
+      'thursday': schedule['thursday']?.toJson(),
+      'friday': schedule['friday']?.toJson(),
+      'saturday': schedule['saturday']?.toJson(),
+      'sunday': schedule['sunday']?.toJson(),
     };
   }
 
   factory WorkingHours.fromJson(Map<String, dynamic> json) {
     return WorkingHours(
-      workingDays: List<bool>.from(json['workingDays']),
-      startTime: TimeOfDay(
-        hour: json['startTime']['hour'],
-        minute: json['startTime']['minute'],
-      ),
-      endTime: TimeOfDay(
-        hour: json['endTime']['hour'],
-        minute: json['endTime']['minute'],
-      ),
-      hasBreak: json['hasBreak'],
-      breakStartTime: TimeOfDay(
-        hour: json['breakStartTime']['hour'],
-        minute: json['breakStartTime']['minute'],
-      ),
-      breakEndTime: TimeOfDay(
-        hour: json['breakEndTime']['hour'],
-        minute: json['breakEndTime']['minute'],
-      ),
+      schedule: {
+        'monday': json['monday'] != null
+            ? DaySchedule.fromJson(json['monday'])
+            : null,
+        'tuesday': json['tuesday'] != null
+            ? DaySchedule.fromJson(json['tuesday'])
+            : null,
+        'wednesday': json['wednesday'] != null
+            ? DaySchedule.fromJson(json['wednesday'])
+            : null,
+        'thursday': json['thursday'] != null
+            ? DaySchedule.fromJson(json['thursday'])
+            : null,
+        'friday': json['friday'] != null
+            ? DaySchedule.fromJson(json['friday'])
+            : null,
+        'saturday': json['saturday'] != null
+            ? DaySchedule.fromJson(json['saturday'])
+            : null,
+        'sunday': json['sunday'] != null
+            ? DaySchedule.fromJson(json['sunday'])
+            : null,
+      },
+    );
+  }
+}
+
+class DaySchedule {
+  final String start;
+  final String end;
+
+  const DaySchedule({
+    required this.start,
+    required this.end,
+  });
+
+  Map<String, dynamic> toJson() {
+    return {
+      'start': start,
+      'end': end,
+    };
+  }
+
+  factory DaySchedule.fromJson(Map<String, dynamic> json) {
+    return DaySchedule(
+      start: json['start'],
+      end: json['end'],
     );
   }
 }
