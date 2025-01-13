@@ -41,6 +41,7 @@ class PaymentInfo {
 
   factory PaymentInfo.fromJson(Map<String, dynamic> json) {
     return PaymentInfo(
+      accountName: json['account_name'],
       bankName: json['bank_name'],
       accountType: json['account_type'],
       accountNumber: json['account_number'],
