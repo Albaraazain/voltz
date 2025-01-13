@@ -174,16 +174,34 @@ class AuthProvider with ChangeNotifier {
 
   Future<void> signOutAndNavigate(BuildContext context) async {
     try {
-      await signOut();
+      // First, detach the auth state listener to prevent unwanted updates
+      _authStateSubscription?.pause();
 
-      // Navigate to welcome screen after sign out
+      // Clear the state immediately but don't notify
+      _isAuthenticated = false;
+      _userType = UserType.none;
+      _user = null;
+      _profile = null;
+
+      // Then sign out from Supabase
+      await _authService.signOut();
+
+      // Only after state is cleared, navigate
       if (context.mounted) {
-        Navigator.of(context).pushAndRemoveUntil(
+        await Navigator.of(context).pushAndRemoveUntil(
           MaterialPageRoute(builder: (_) => const WelcomeScreen()),
-          (route) => false, // Remove all previous routes
+          (route) => false,
         );
       }
+
+      // Finally notify listeners after navigation is complete
+      notifyListeners();
+
+      // Resume the auth state listener
+      _authStateSubscription?.resume();
     } catch (e, stackTrace) {
+      // Resume the auth state listener in case of error
+      _authStateSubscription?.resume();
       LoggerService.error('Failed to sign out and navigate', e, stackTrace);
       rethrow;
     }
@@ -196,10 +214,4 @@ class AuthProvider with ChangeNotifier {
   }
 }
 
-// TODO: Implement biometric authentication support
-// TODO: Implement password reset functionality
-// TODO: Implement email verification process
-// TODO: Add social authentication (Google, Apple, Facebook)
-// TODO: Implement session management and token refresh
-// TODO: Add two-factor authentication support
 // TODO: Implement account deletion functionality
