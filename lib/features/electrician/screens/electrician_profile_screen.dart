@@ -345,14 +345,7 @@ class ElectricianProfileScreen extends StatelessWidget {
                       CustomButton(
                         onPressed: () async {
                           final authProvider = context.read<AuthProvider>();
-                          await authProvider.signOut();
-                          if (context.mounted) {
-                            Navigator.pushNamedAndRemoveUntil(
-                              context,
-                              '/login',
-                              (route) => false,
-                            );
-                          }
+                          await authProvider.signOutAndNavigate(context);
                         },
                         text: 'Sign Out',
                         type: ButtonType.secondary,
