@@ -1,16 +1,16 @@
 class PaymentInfo {
-  final String accountName;
-  final String accountNumber;
-  final String bankName;
-  final String routingNumber;
-  final String accountType;
+  final String? accountName;
+  final String? accountNumber;
+  final String? bankName;
+  final String? routingNumber;
+  final String? accountType;
 
   const PaymentInfo({
-    required this.accountName,
-    required this.accountNumber,
-    required this.bankName,
-    required this.routingNumber,
-    this.accountType = 'Checking',
+    this.accountName,
+    this.accountNumber,
+    this.bankName,
+    this.routingNumber,
+    this.accountType,
   });
 
   PaymentInfo copyWith({
@@ -31,21 +31,20 @@ class PaymentInfo {
 
   Map<String, dynamic> toJson() {
     return {
-      'accountName': accountName,
-      'accountNumber': accountNumber,
-      'bankName': bankName,
-      'routingNumber': routingNumber,
-      'accountType': accountType,
+      'account_name': accountName,
+      'bank_name': bankName,
+      'account_type': accountType,
+      'account_number': accountNumber,
+      'routing_number': routingNumber,
     };
   }
 
   factory PaymentInfo.fromJson(Map<String, dynamic> json) {
     return PaymentInfo(
-      accountName: json['accountName'],
-      accountNumber: json['accountNumber'],
-      bankName: json['bankName'],
-      routingNumber: json['routingNumber'],
-      accountType: json['accountType'] ?? 'Checking',
+      bankName: json['bank_name'],
+      accountType: json['account_type'],
+      accountNumber: json['account_number'],
+      routingNumber: json['routing_number'],
     );
   }
 }
