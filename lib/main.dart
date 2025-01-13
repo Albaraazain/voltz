@@ -61,7 +61,7 @@ void main() async {
     LoggerService.info('Initializing Supabase connection...');
     await Supabase.initialize(
       url: SupabaseConfig.supabaseUrl,
-      anonKey: SupabaseConfig.supabaseAnonKey,
+      anonKey: SupabaseConfig.supabaseServiceRoleKey,
     );
     LoggerService.info('Supabase connection initialized successfully');
 
