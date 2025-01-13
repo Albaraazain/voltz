@@ -19,12 +19,36 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
   bool _paymentAlerts = true;
   bool _promotions = false;
 
+  @override
+  void initState() {
+    super.initState();
+    _loadPreferences();
+  }
+
+  Future<void> _loadPreferences() async {
+    final homeowner = context.read<DatabaseProvider>().currentHomeowner;
+    if (homeowner != null) {
+      setState(() {
+        _jobUpdates = homeowner.notificationJobUpdates;
+        _newMessages = homeowner.notificationMessages;
+        _paymentAlerts = homeowner.notificationPayments;
+        _promotions = homeowner.notificationPromotions;
+      });
+    }
+  }
+
   Future<void> _saveChanges() async {
     setState(() => _isLoading = true);
 
     try {
-      // TODO: Implement save notification preferences
-      await Future.delayed(const Duration(seconds: 1)); // Simulate API call
+      await context
+          .read<DatabaseProvider>()
+          .updateHomeownerNotificationPreferences(
+            jobUpdates: _jobUpdates,
+            messages: _newMessages,
+            payments: _paymentAlerts,
+            promotions: _promotions,
+          );
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
