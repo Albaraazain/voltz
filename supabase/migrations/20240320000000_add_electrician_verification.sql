@@ -14,13 +14,13 @@ CREATE POLICY "Enable read access for verified electricians" ON electricians
         (auth.jwt() ->> 'role' = 'admin')
         OR
         -- Electricians can see their own profile
-        (auth.uid() = profile_id)
+        (auth.uid()::uuid = profile_id)
         OR
         -- Homeowners can only see verified electricians
         (
             EXISTS (
                 SELECT 1 FROM profiles 
-                WHERE id = auth.uid() 
+                WHERE id = auth.uid()::uuid 
                 AND user_type = 'homeowner'
             )
             AND is_verified = true
