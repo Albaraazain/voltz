@@ -93,8 +93,12 @@ export type Database = {
           created_at: string | null
           emergency_contact: string | null
           id: string
+          notification_job_updates: boolean
+          notification_messages: boolean
+          notification_payments: boolean
+          notification_promotions: boolean
           phone: string | null
-          preferred_contact_method: string | null
+          preferred_contact_method: 'email' | 'phone' | 'sms'
           profile_id: string | null
         }
         Insert: {
@@ -102,8 +106,12 @@ export type Database = {
           created_at?: string | null
           emergency_contact?: string | null
           id?: string
+          notification_job_updates?: boolean
+          notification_messages?: boolean
+          notification_payments?: boolean
+          notification_promotions?: boolean
           phone?: string | null
-          preferred_contact_method?: string | null
+          preferred_contact_method?: 'email' | 'phone' | 'sms'
           profile_id?: string | null
         }
         Update: {
@@ -111,8 +119,12 @@ export type Database = {
           created_at?: string | null
           emergency_contact?: string | null
           id?: string
+          notification_job_updates?: boolean
+          notification_messages?: boolean
+          notification_payments?: boolean
+          notification_promotions?: boolean
           phone?: string | null
-          preferred_contact_method?: string | null
+          preferred_contact_method?: 'email' | 'phone' | 'sms'
           profile_id?: string | null
         }
         Relationships: [
