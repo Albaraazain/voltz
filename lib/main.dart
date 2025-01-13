@@ -107,17 +107,30 @@ class MyApp extends StatelessWidget {
             return previous ?? DatabaseProvider(auth);
           },
         ),
-        // Other providers
-        ChangeNotifierProvider(
-          create: (_) {
-            LoggerService.info('Initializing ElectricianProvider');
-            return ElectricianProvider();
+        // Electrician provider depends on database provider
+        ChangeNotifierProxyProvider<DatabaseProvider, ElectricianProvider>(
+          create: (context) {
+            LoggerService.info(
+                'Creating ElectricianProvider with DatabaseProvider dependency');
+            return ElectricianProvider(context.read<DatabaseProvider>());
+          },
+          update: (context, db, previous) {
+            LoggerService.info(
+                'Updating ElectricianProvider with new DatabaseProvider instance');
+            return previous ?? ElectricianProvider(db);
           },
         ),
-        ChangeNotifierProvider(
-          create: (_) {
-            LoggerService.info('Initializing HomeownerProvider');
-            return HomeownerProvider();
+        // Homeowner provider depends on database provider
+        ChangeNotifierProxyProvider<DatabaseProvider, HomeownerProvider>(
+          create: (context) {
+            LoggerService.info(
+                'Creating HomeownerProvider with DatabaseProvider dependency');
+            return HomeownerProvider(context.read<DatabaseProvider>());
+          },
+          update: (context, db, previous) {
+            LoggerService.info(
+                'Updating HomeownerProvider with new DatabaseProvider instance');
+            return previous ?? HomeownerProvider(db);
           },
         ),
         ChangeNotifierProvider(
