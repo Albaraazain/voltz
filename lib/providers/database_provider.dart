@@ -502,6 +502,11 @@ class DatabaseProvider with ChangeNotifier {
         'license_number': electrician.licenseNumber,
         'years_of_experience': electrician.yearsOfExperience,
         'is_verified': electrician.isVerified,
+        'services': electrician.services.map((s) => s.toJson()).toList(),
+        'working_hours': electrician.workingHours.toJson(),
+        'payment_info': electrician.paymentInfo?.toJson(),
+        'notification_preferences':
+            electrician.notificationPreferences.toJson(),
       }).eq('id', electrician.id);
 
       // Update local list if the electrician exists in it
@@ -555,7 +560,13 @@ class DatabaseProvider with ChangeNotifier {
           .update({'services': services.map((s) => s.toJson()).toList()}).eq(
               'id', electrician.id);
 
-      await loadElectricians();
+      // Update local state
+      final index = _electricians.indexWhere((e) => e.id == electrician.id);
+      if (index != -1) {
+        _electricians[index] =
+            _electricians[index].copyWith(services: services);
+        notifyListeners();
+      }
     } catch (e, stackTrace) {
       LoggerService.error('Failed to update services', e, stackTrace);
       rethrow;
@@ -811,7 +822,10 @@ class DatabaseProvider with ChangeNotifier {
           (e) => e.profile.id == _currentProfile!.id,
           orElse: () => throw Exception('Electrician not found'));
 
-      final services = [...electrician.services, service];
+      final newService = service.copyWith(
+        id: DateTime.now().millisecondsSinceEpoch.toString(),
+      );
+      final services = [...electrician.services, newService];
       await updateElectricianServices(services);
     } catch (e, stackTrace) {
       LoggerService.error('Failed to add service', e, stackTrace);
@@ -830,7 +844,7 @@ class DatabaseProvider with ChangeNotifier {
           orElse: () => throw Exception('Electrician not found'));
 
       final services =
-          electrician.services.where((s) => s.title != service.title).toList();
+          electrician.services.where((s) => s.id != service.id).toList();
       await updateElectricianServices(services);
     } catch (e, stackTrace) {
       LoggerService.error('Failed to remove service', e, stackTrace);
