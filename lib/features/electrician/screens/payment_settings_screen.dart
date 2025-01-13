@@ -40,17 +40,23 @@ class _PaymentSettingsScreenState extends State<PaymentSettingsScreen> {
 
     if (electrician.paymentInfo != null) {
       setState(() {
-        _accountNameController.text = electrician.paymentInfo!.accountName;
-        _accountNumberController.text = electrician.paymentInfo!.accountNumber;
-        _bankNameController.text = electrician.paymentInfo!.bankName;
-        _routingNumberController.text = electrician.paymentInfo!.routingNumber;
-        _selectedAccountType = electrician.paymentInfo!.accountType;
+        _accountNameController.text =
+            electrician.paymentInfo!.accountName ?? '';
+        _accountNumberController.text =
+            electrician.paymentInfo!.accountNumber ?? '';
+        _bankNameController.text = electrician.paymentInfo!.bankName ?? '';
+        _routingNumberController.text =
+            electrician.paymentInfo!.routingNumber ?? '';
+        _selectedAccountType =
+            electrician.paymentInfo!.accountType ?? 'Checking';
       });
     }
   }
 
   Future<void> _savePaymentInfo() async {
     if (_formKey.currentState!.validate()) {
+      setState(() => _isLoading = true);
+
       final paymentInfo = PaymentInfo(
         accountName: _accountNameController.text,
         accountNumber: _accountNumberController.text,
@@ -60,7 +66,17 @@ class _PaymentSettingsScreenState extends State<PaymentSettingsScreen> {
       );
 
       try {
-        await context.read<DatabaseProvider>().updatePaymentInfo(paymentInfo);
+        final dbProvider = context.read<DatabaseProvider>();
+        final currentElectrician = dbProvider.electricians.firstWhere(
+          (e) => e.profile.id == dbProvider.currentProfile?.id,
+        );
+
+        final updatedElectrician = currentElectrician.copyWith(
+          paymentInfo: paymentInfo,
+        );
+
+        await dbProvider.updateElectricianProfile(updatedElectrician);
+
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
@@ -73,6 +89,8 @@ class _PaymentSettingsScreenState extends State<PaymentSettingsScreen> {
             SnackBar(content: Text('Error saving payment information: $e')),
           );
         }
+      } finally {
+        if (mounted) setState(() => _isLoading = false);
       }
     }
   }
