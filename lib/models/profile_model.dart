@@ -19,10 +19,10 @@ class Profile {
     return {
       'id': id,
       'email': email,
-      'userType': userType,
+      'user_type': userType,
       'name': name,
-      'createdAt': createdAt.toIso8601String(),
-      'lastLoginAt': lastLoginAt?.toIso8601String(),
+      'created_at': createdAt.toIso8601String(),
+      'last_login_at': lastLoginAt?.toIso8601String(),
     };
   }
 
