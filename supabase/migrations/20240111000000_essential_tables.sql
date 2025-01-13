@@ -1,3 +1,39 @@
+-- Create profiles table first
+CREATE TABLE IF NOT EXISTS profiles (
+  id UUID PRIMARY KEY,
+  email TEXT NOT NULL UNIQUE,
+  user_type TEXT NOT NULL DEFAULT 'homeowner',
+  name TEXT NOT NULL,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+  last_login_at TIMESTAMP WITH TIME ZONE
+);
+
+-- Create homeowners table
+CREATE TABLE IF NOT EXISTS homeowners (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  profile_id UUID REFERENCES profiles(id),
+  phone TEXT,
+  address TEXT,
+  preferred_contact_method TEXT DEFAULT 'email',
+  emergency_contact TEXT,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Create electricians table
+CREATE TABLE IF NOT EXISTS electricians (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  profile_id UUID REFERENCES profiles(id),
+  rating REAL DEFAULT 0.0,
+  jobs_completed INTEGER DEFAULT 0,
+  hourly_rate REAL DEFAULT 0.0,
+  profile_image TEXT,
+  is_available BOOLEAN DEFAULT true,
+  specialties TEXT[],
+  license_number TEXT,
+  years_of_experience INTEGER DEFAULT 0,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
 -- Create jobs table
 CREATE TABLE IF NOT EXISTS jobs (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -6,6 +42,7 @@ CREATE TABLE IF NOT EXISTS jobs (
   status TEXT NOT NULL,
   date TIMESTAMP WITH TIME ZONE NOT NULL,
   homeowner_id UUID NOT NULL REFERENCES homeowners(id),
+  electrician_id UUID REFERENCES electricians(id),
   price DECIMAL(10,2) NOT NULL,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
