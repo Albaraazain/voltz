@@ -224,4 +224,54 @@ CREATE INDEX IF NOT EXISTS idx_reviews_job_id ON reviews(job_id);
 CREATE INDEX IF NOT EXISTS idx_notifications_profile_id ON notifications(profile_id);
 CREATE INDEX IF NOT EXISTS idx_notifications_is_read ON notifications(is_read);
 CREATE INDEX IF NOT EXISTS idx_payments_job_id ON payments(job_id);
-CREATE INDEX IF NOT EXISTS idx_payments_status ON payments(status); 
+CREATE INDEX IF NOT EXISTS idx_payments_status ON payments(status);
+
+-- Create function to count today's jobs
+CREATE OR REPLACE FUNCTION count_today_jobs(electrician_id UUID)
+RETURNS TABLE (count BIGINT)
+LANGUAGE plpgsql
+SECURITY DEFINER
+AS $$
+BEGIN
+  RETURN QUERY
+  SELECT COUNT(*)::BIGINT
+  FROM jobs
+  WHERE jobs.electrician_id = $1
+  AND DATE(jobs.date) = CURRENT_DATE;
+END;
+$$;
+
+-- Create function to count pending jobs
+CREATE OR REPLACE FUNCTION count_pending_jobs(electrician_id UUID)
+RETURNS TABLE (count BIGINT)
+LANGUAGE plpgsql
+SECURITY DEFINER
+AS $$
+BEGIN
+  RETURN QUERY
+  SELECT COUNT(*)::BIGINT
+  FROM jobs
+  WHERE jobs.electrician_id = $1
+  AND jobs.status = 'pending';
+END;
+$$;
+
+-- Create function to count unread notifications
+CREATE OR REPLACE FUNCTION count_unread_notifications(profile_id UUID)
+RETURNS TABLE (count BIGINT)
+LANGUAGE plpgsql
+SECURITY DEFINER
+AS $$
+BEGIN
+  RETURN QUERY
+  SELECT COUNT(*)::BIGINT
+  FROM notifications
+  WHERE notifications.profile_id = $1
+  AND notifications.is_read = false;
+END;
+$$;
+
+-- Grant execute permissions to authenticated users
+GRANT EXECUTE ON FUNCTION count_today_jobs TO authenticated;
+GRANT EXECUTE ON FUNCTION count_pending_jobs TO authenticated;
+GRANT EXECUTE ON FUNCTION count_unread_notifications TO authenticated; 
