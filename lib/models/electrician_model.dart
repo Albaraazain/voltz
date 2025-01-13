@@ -45,36 +45,45 @@ class Electrician {
   Map<String, dynamic> toJson() {
     return {
       'id': id,
-      'profile': profile.toJson(),
-      'profileImage': profileImage,
+      'profile_id': profile.id,
+      'profile_image': profileImage,
       'phone': phone,
-      'licenseNumber': licenseNumber,
-      'yearsOfExperience': yearsOfExperience,
-      'hourlyRate': hourlyRate,
+      'license_number': licenseNumber,
+      'years_of_experience': yearsOfExperience,
+      'hourly_rate': hourlyRate,
       'rating': rating,
-      'jobsCompleted': jobsCompleted,
-      'isAvailable': isAvailable,
-      'isVerified': isVerified,
+      'jobs_completed': jobsCompleted,
+      'is_available': isAvailable,
+      'is_verified': isVerified,
       'services': services.map((s) => s.toJson()).toList(),
       'specialties': specialties,
-      'workingHours': workingHours.toJson(),
-      'paymentInfo': paymentInfo?.toJson(),
-      'notificationPreferences': notificationPreferences.toJson(),
+      'working_hours': workingHours.toJson(),
+      'payment_info': paymentInfo?.toJson(),
+      'notification_preferences': notificationPreferences.toJson(),
     };
   }
 
   factory Electrician.fromJson(Map<String, dynamic> json) {
     return Electrician(
       id: json['id'] ?? '',
-      profile: Profile.fromJson(json['profile']),
+      profile: json['profile'] != null
+          ? Profile.fromJson(json['profile'])
+          : Profile(
+              id: json['profile_id'] ?? '',
+              email: '',
+              userType: 'electrician',
+              name: '',
+              createdAt: DateTime.parse(
+                  json['created_at'] ?? DateTime.now().toIso8601String()),
+            ),
       profileImage: json['profile_image'],
       phone: json['phone'] ?? '',
       licenseNumber: json['license_number'] ?? '',
       yearsOfExperience: json['years_of_experience'] ?? 0,
-      hourlyRate: (json['hourly_rate'] ?? 0).toDouble(),
-      rating: (json['rating'] ?? 0).toDouble(),
+      hourlyRate: (json['hourly_rate'] ?? 0.0).toDouble(),
+      rating: (json['rating'] ?? 0.0).toDouble(),
       jobsCompleted: json['jobs_completed'] ?? 0,
-      isAvailable: json['is_available'] ?? false,
+      isAvailable: json['is_available'] ?? true,
       isVerified: json['is_verified'] ?? false,
       services: json['services'] != null
           ? (json['services'] as List).map((s) => Service.fromJson(s)).toList()
