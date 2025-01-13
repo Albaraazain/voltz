@@ -46,12 +46,11 @@ class _PersonalInfoScreenState extends State<PersonalInfoScreen> {
     setState(() => _isLoading = true);
 
     try {
-      // TODO: Implement save changes in DatabaseProvider
-      // await context.read<DatabaseProvider>().updateProfile(
-      //   name: _nameController.text,
-      //   phone: _phoneController.text,
-      //   emergencyContact: _emergencyContactController.text,
-      // );
+      await context.read<DatabaseProvider>().updateHomeownerPersonalInfo(
+            name: _nameController.text,
+            phone: _phoneController.text,
+            emergencyContact: _emergencyContactController.text,
+          );
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
