@@ -1,0 +1,1 @@
+ /Users/albaraamac/Documents/Documents\ -\ albaraa’s\ MacBook\ Air/Projects/voltz/.dart_tool/flutter_build/290c9431b6dc50e080ae3f294c0d22ba/native_assets.yaml: 
