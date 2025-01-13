@@ -65,8 +65,7 @@ class _AddressScreenState extends State<AddressScreen> {
         _zipController.text,
       ].join(', ');
 
-      // TODO: Implement save address in DatabaseProvider
-      // await context.read<DatabaseProvider>().updateAddress(address);
+      await context.read<DatabaseProvider>().updateHomeownerAddress(address);
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
