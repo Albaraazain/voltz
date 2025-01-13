@@ -68,27 +68,144 @@ class _AvailabilitySettingsScreenState
     }
   }
 
-  Future<void> _selectTime(bool isStart) async {
+  Future<void> _selectTime(String day, bool isStart) async {
+    final currentSchedule = _workingHours.schedule[day];
+    final currentTime = isStart ? currentSchedule?.start : currentSchedule?.end;
+
+    final TimeOfDay initialTime = currentTime != null
+        ? TimeOfDay(
+            hour: int.parse(currentTime.split(':')[0]),
+            minute: int.parse(currentTime.split(':')[1]),
+          )
+        : const TimeOfDay(hour: 9, minute: 0);
+
     final TimeOfDay? picked = await showTimePicker(
       context: context,
-      initialTime: isStart ? _workingHours.startTime : _workingHours.endTime,
+      initialTime: initialTime,
     );
 
     if (picked != null) {
+      final formattedTime =
+          '${picked.hour.toString().padLeft(2, '0')}:${picked.minute.toString().padLeft(2, '0')}';
+
       setState(() {
-        if (isStart) {
-          _workingHours = _workingHours.copyWith(startTime: picked);
+        final newSchedule =
+            Map<String, DaySchedule?>.from(_workingHours.schedule);
+        final currentDaySchedule = newSchedule[day];
+
+        if (currentDaySchedule == null) {
+          newSchedule[day] = DaySchedule(
+            start: isStart ? formattedTime : '17:00',
+            end: isStart ? '17:00' : formattedTime,
+          );
         } else {
-          _workingHours = _workingHours.copyWith(endTime: picked);
+          newSchedule[day] = DaySchedule(
+            start: isStart ? formattedTime : currentDaySchedule.start,
+            end: isStart ? currentDaySchedule.end : formattedTime,
+          );
         }
+
+        _workingHours = WorkingHours(schedule: newSchedule);
       });
     }
   }
 
-  String _formatTimeOfDay(TimeOfDay time) {
-    final hour = time.hour.toString().padLeft(2, '0');
-    final minute = time.minute.toString().padLeft(2, '0');
-    return '$hour:$minute';
+  Widget _buildDaySchedule(String day, String label) {
+    final schedule = _workingHours.schedule[day];
+    final isEnabled = schedule != null;
+
+    return Column(
+      children: [
+        SwitchListTile(
+          value: isEnabled,
+          onChanged: (value) {
+            setState(() {
+              final newSchedule =
+                  Map<String, DaySchedule?>.from(_workingHours.schedule);
+              newSchedule[day] = value
+                  ? const DaySchedule(start: '09:00', end: '17:00')
+                  : null;
+              _workingHours = WorkingHours(schedule: newSchedule);
+            });
+          },
+          title: Text(label, style: AppTextStyles.bodyMedium),
+          activeColor: AppColors.accent,
+        ),
+        if (isEnabled) ...[
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Start Time',
+                        style: AppTextStyles.bodySmall.copyWith(
+                          color: AppColors.textSecondary,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      InkWell(
+                        onTap: () => _selectTime(day, true),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 16,
+                            vertical: 12,
+                          ),
+                          decoration: BoxDecoration(
+                            border: Border.all(color: AppColors.border),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Text(
+                            schedule?.start ?? '09:00',
+                            style: AppTextStyles.bodyMedium,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'End Time',
+                        style: AppTextStyles.bodySmall.copyWith(
+                          color: AppColors.textSecondary,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      InkWell(
+                        onTap: () => _selectTime(day, false),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 16,
+                            vertical: 12,
+                          ),
+                          decoration: BoxDecoration(
+                            border: Border.all(color: AppColors.border),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Text(
+                            schedule?.end ?? '17:00',
+                            style: AppTextStyles.bodyMedium,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 16),
+        ],
+      ],
+    );
   }
 
   @override
@@ -106,229 +223,22 @@ class _AvailabilitySettingsScreenState
       body: ListView(
         padding: const EdgeInsets.all(24),
         children: [
-          // Working Days
-          Text('Working Days', style: AppTextStyles.h3),
+          Text('Working Days & Hours', style: AppTextStyles.h3),
           const SizedBox(height: 16),
-          _buildDayToggle('Monday', 0),
-          _buildDayToggle('Tuesday', 1),
-          _buildDayToggle('Wednesday', 2),
-          _buildDayToggle('Thursday', 3),
-          _buildDayToggle('Friday', 4),
-          _buildDayToggle('Saturday', 5),
-          _buildDayToggle('Sunday', 6),
-
+          _buildDaySchedule('monday', 'Monday'),
+          _buildDaySchedule('tuesday', 'Tuesday'),
+          _buildDaySchedule('wednesday', 'Wednesday'),
+          _buildDaySchedule('thursday', 'Thursday'),
+          _buildDaySchedule('friday', 'Friday'),
+          _buildDaySchedule('saturday', 'Saturday'),
+          _buildDaySchedule('sunday', 'Sunday'),
           const SizedBox(height: 32),
-
-          // Working Hours
-          Text('Working Hours', style: AppTextStyles.h3),
-          const SizedBox(height: 16),
-          Row(
-            children: [
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Start Time',
-                      style: AppTextStyles.bodySmall.copyWith(
-                        color: AppColors.textSecondary,
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    InkWell(
-                      onTap: () => _selectTime(true),
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 16,
-                          vertical: 12,
-                        ),
-                        decoration: BoxDecoration(
-                          border: Border.all(color: AppColors.border),
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: Text(
-                          _formatTimeOfDay(_workingHours.startTime),
-                          style: AppTextStyles.bodyMedium,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(width: 16),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'End Time',
-                      style: AppTextStyles.bodySmall.copyWith(
-                        color: AppColors.textSecondary,
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    InkWell(
-                      onTap: () => _selectTime(false),
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 16,
-                          vertical: 12,
-                        ),
-                        decoration: BoxDecoration(
-                          border: Border.all(color: AppColors.border),
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: Text(
-                          _formatTimeOfDay(_workingHours.endTime),
-                          style: AppTextStyles.bodyMedium,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-
-          const SizedBox(height: 32),
-
-          // Break Time
-          Text('Break Time', style: AppTextStyles.h3),
-          const SizedBox(height: 16),
-          SwitchListTile(
-            value: _workingHours.hasBreak,
-            onChanged: (value) {
-              setState(() {
-                _workingHours = _workingHours.copyWith(hasBreak: value);
-              });
-            },
-            title: Text(
-              'Take Break',
-              style: AppTextStyles.bodyMedium,
-            ),
-            activeColor: AppColors.accent,
-          ),
-          if (_workingHours.hasBreak) ...[
-            const SizedBox(height: 16),
-            Row(
-              children: [
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Break Start',
-                        style: AppTextStyles.bodySmall.copyWith(
-                          color: AppColors.textSecondary,
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      InkWell(
-                        onTap: () async {
-                          final TimeOfDay? picked = await showTimePicker(
-                            context: context,
-                            initialTime: _workingHours.breakStartTime,
-                          );
-                          if (picked != null) {
-                            setState(() {
-                              _workingHours = _workingHours.copyWith(
-                                breakStartTime: picked,
-                              );
-                            });
-                          }
-                        },
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 16,
-                            vertical: 12,
-                          ),
-                          decoration: BoxDecoration(
-                            border: Border.all(color: AppColors.border),
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          child: Text(
-                            _formatTimeOfDay(_workingHours.breakStartTime),
-                            style: AppTextStyles.bodyMedium,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Break End',
-                        style: AppTextStyles.bodySmall.copyWith(
-                          color: AppColors.textSecondary,
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      InkWell(
-                        onTap: () async {
-                          final TimeOfDay? picked = await showTimePicker(
-                            context: context,
-                            initialTime: _workingHours.breakEndTime,
-                          );
-                          if (picked != null) {
-                            setState(() {
-                              _workingHours = _workingHours.copyWith(
-                                breakEndTime: picked,
-                              );
-                            });
-                          }
-                        },
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 16,
-                            vertical: 12,
-                          ),
-                          decoration: BoxDecoration(
-                            border: Border.all(color: AppColors.border),
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          child: Text(
-                            _formatTimeOfDay(_workingHours.breakEndTime),
-                            style: AppTextStyles.bodyMedium,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-          ],
-
-          const SizedBox(height: 32),
-
           CustomButton(
             onPressed: _isLoading ? null : _saveWorkingHours,
             text: _isLoading ? 'Saving...' : 'Save Changes',
           ),
         ],
       ),
-    );
-  }
-
-  Widget _buildDayToggle(String day, int index) {
-    return SwitchListTile(
-      value: _workingHours.workingDays[index],
-      onChanged: (value) {
-        setState(() {
-          final newDays = List<bool>.from(_workingHours.workingDays);
-          newDays[index] = value;
-          _workingHours = _workingHours.copyWith(workingDays: newDays);
-        });
-      },
-      title: Text(
-        day,
-        style: AppTextStyles.bodyMedium,
-      ),
-      activeColor: AppColors.accent,
     );
   }
 }
