@@ -61,8 +61,8 @@ class _IncomingRequestsScreenState extends State<IncomingRequestsScreen>
       setState(() => _isLoading = true);
 
       await context.read<DirectRequestProvider>().updateRequestStatus(
-            request.id,
-            action == 'accept'
+            requestId: request.id,
+            status: action == 'accept'
                 ? DirectRequest.STATUS_ACCEPTED
                 : DirectRequest.STATUS_DECLINED,
           );
