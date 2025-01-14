@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:voltz/core/services/logger_service.dart';
+import 'package:voltz/features/electrician/widgets/job_request_card.dart';
 import '../../../core/constants/colors.dart';
 import '../../../core/constants/text_styles.dart';
 import '../../../providers/job_provider.dart';
 import '../../../providers/database_provider.dart';
-import '../../../models/job_model.dart';
-import '../../../core/services/logger_service.dart';
-import '../widgets/job_request_card.dart';
+import '../../common/widgets/custom_button.dart';
 import '../../common/widgets/loading_indicator.dart';
 
 class JobRequestsScreen extends StatefulWidget {
