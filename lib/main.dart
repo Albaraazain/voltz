@@ -20,7 +20,9 @@ import 'features/electrician/screens/reviews_screen.dart';
 import 'features/electrician/screens/availability_settings_screen.dart';
 import 'features/electrician/screens/payment_settings_screen.dart';
 import 'features/common/screens/review_details_screen.dart';
+import 'features/electrician/screens/job_details_screen.dart';
 import 'models/review_model.dart';
+import 'models/job_model.dart';
 
 Future<void> validateDatabaseSchema() async {
   final client = SupabaseConfig.client;
@@ -196,6 +198,12 @@ class MyApp extends StatelessWidget {
               return MaterialPageRoute(
                 builder: (_) => ReviewDetailsScreen(
                   review: settings.arguments as Review,
+                ),
+              );
+            case '/electrician/job-details':
+              return MaterialPageRoute(
+                builder: (_) => JobDetailsScreen(
+                  job: settings.arguments as Job,
                 ),
               );
             default:
