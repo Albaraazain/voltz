@@ -1,3 +1,6 @@
+import 'homeowner_model.dart';
+import 'electrician_model.dart';
+
 class Job {
   // Payment status constants
   static const String PAYMENT_STATUS_PENDING = 'payment_pending';
@@ -33,6 +36,8 @@ class Job {
   final String? verificationStatus;
   final Map<String, dynamic>? paymentDetails;
   final Map<String, dynamic>? verificationDetails;
+  final Homeowner? homeowner;
+  final Electrician? electrician;
 
   const Job({
     required this.id,
@@ -48,6 +53,8 @@ class Job {
     this.verificationStatus,
     this.paymentDetails,
     this.verificationDetails,
+    this.homeowner,
+    this.electrician,
   });
 
   Map<String, dynamic> toJson() {
@@ -83,6 +90,12 @@ class Job {
       verificationStatus: json['verification_status'],
       paymentDetails: json['payment_details'],
       verificationDetails: json['verification_details'],
+      homeowner: json['homeowner'] != null
+          ? Homeowner.fromJson(json['homeowner'])
+          : null,
+      electrician: json['electrician'] != null
+          ? Electrician.fromJson(json['electrician'])
+          : null,
     );
   }
 
@@ -100,6 +113,8 @@ class Job {
     String? verificationStatus,
     Map<String, dynamic>? paymentDetails,
     Map<String, dynamic>? verificationDetails,
+    Homeowner? homeowner,
+    Electrician? electrician,
   }) {
     return Job(
       id: id ?? this.id,
@@ -115,6 +130,8 @@ class Job {
       verificationStatus: verificationStatus ?? this.verificationStatus,
       paymentDetails: paymentDetails ?? this.paymentDetails,
       verificationDetails: verificationDetails ?? this.verificationDetails,
+      homeowner: homeowner ?? this.homeowner,
+      electrician: electrician ?? this.electrician,
     );
   }
 
