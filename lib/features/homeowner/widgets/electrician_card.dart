@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import '../../../core/constants/colors.dart';
 import '../../../core/constants/text_styles.dart';
+import '../screens/electrician_profile_view_screen.dart';
 
 class ElectricianCard extends StatelessWidget {
+  final String id;
   final String name;
   final double rating;
   final String specialty;
@@ -13,6 +15,7 @@ class ElectricianCard extends StatelessWidget {
 
   const ElectricianCard({
     super.key,
+    required this.id,
     required this.name,
     required this.rating,
     required this.specialty,
@@ -101,12 +104,12 @@ class ElectricianCard extends StatelessWidget {
                         children: [
                           _InfoChip(
                             icon: Icons.attach_money,
-                            label: price,
+                            text: price,
                           ),
                           const SizedBox(width: 8),
                           _InfoChip(
                             icon: Icons.location_on_outlined,
-                            label: distance,
+                            text: distance,
                           ),
                         ],
                       ),
@@ -116,14 +119,10 @@ class ElectricianCard extends StatelessWidget {
               ],
             ),
           ),
+
           // Footer with Availability and Action
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-            decoration: const BoxDecoration(
-              border: Border(
-                top: BorderSide(color: AppColors.border),
-              ),
-            ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
             child: Row(
               children: [
                 Container(
@@ -132,7 +131,7 @@ class ElectricianCard extends StatelessWidget {
                     vertical: 6,
                   ),
                   decoration: BoxDecoration(
-                    color: AppColors.primary,
+                    color: AppColors.primary.withOpacity(0.1),
                     borderRadius: BorderRadius.circular(20),
                   ),
                   child: Text(
@@ -146,7 +145,14 @@ class ElectricianCard extends StatelessWidget {
                 const Spacer(),
                 TextButton(
                   onPressed: () {
-                    // TODO: Navigate to electrician profile
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => ElectricianProfileViewScreen(
+                          electricianId: id,
+                        ),
+                      ),
+                    );
                   },
                   child: Row(
                     children: [
@@ -176,20 +182,23 @@ class ElectricianCard extends StatelessWidget {
 
 class _InfoChip extends StatelessWidget {
   final IconData icon;
-  final String label;
+  final String text;
 
   const _InfoChip({
     required this.icon,
-    required this.label,
+    required this.text,
   });
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      padding: const EdgeInsets.symmetric(
+        horizontal: 8,
+        vertical: 4,
+      ),
       decoration: BoxDecoration(
         color: AppColors.background,
-        borderRadius: BorderRadius.circular(8),
+        borderRadius: BorderRadius.circular(12),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
@@ -201,8 +210,10 @@ class _InfoChip extends StatelessWidget {
           ),
           const SizedBox(width: 4),
           Text(
-            label,
-            style: AppTextStyles.caption,
+            text,
+            style: AppTextStyles.caption.copyWith(
+              color: AppColors.textSecondary,
+            ),
           ),
         ],
       ),

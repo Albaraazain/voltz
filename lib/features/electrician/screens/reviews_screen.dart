@@ -4,11 +4,68 @@ import '../../../core/constants/colors.dart';
 import '../../../core/constants/text_styles.dart';
 import '../../../providers/database_provider.dart';
 import '../../../providers/review_provider.dart';
+import '../../../models/review_model.dart';
 import '../../common/widgets/review_list_item.dart';
 import '../../common/widgets/loading_indicator.dart';
 
-class ReviewsScreen extends StatelessWidget {
+class ReviewsScreen extends StatefulWidget {
   const ReviewsScreen({super.key});
+
+  @override
+  State<ReviewsScreen> createState() => _ReviewsScreenState();
+}
+
+class _ReviewsScreenState extends State<ReviewsScreen> {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _loadReviews();
+    });
+  }
+
+  Future<void> _loadReviews() async {
+    final dbProvider = context.read<DatabaseProvider>();
+    final reviewProvider = context.read<ReviewProvider>();
+
+    if (dbProvider.currentProfile == null) return;
+
+    final electrician = dbProvider.electricians.firstWhere(
+      (e) => e.profile.id == dbProvider.currentProfile!.id,
+    );
+
+    await reviewProvider.getReviewsForElectrician(electrician.id);
+  }
+
+  Widget _buildStat(String value, String label, IconData icon) {
+    return Column(
+      children: [
+        Container(
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            color: AppColors.primary,
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Icon(
+            icon,
+            color: AppColors.accent,
+            size: 24,
+          ),
+        ),
+        const SizedBox(height: 8),
+        Text(
+          value,
+          style: AppTextStyles.h3,
+        ),
+        Text(
+          label,
+          style: AppTextStyles.bodySmall.copyWith(
+            color: AppColors.textSecondary,
+          ),
+        ),
+      ],
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -28,12 +85,17 @@ class ReviewsScreen extends StatelessWidget {
             return const LoadingIndicator();
           }
 
+          if (dbProvider.currentProfile == null) {
+            return const Center(
+              child: Text('Please log in to view your reviews'),
+            );
+          }
+
           final electrician = dbProvider.electricians.firstWhere(
-            (e) => e.profile.id == dbProvider.currentProfile?.id,
+            (e) => e.profile.id == dbProvider.currentProfile!.id,
           );
 
-          final reviews =
-              reviewProvider.getReviewsForElectrician(electrician.id);
+          final reviews = reviewProvider.reviews;
 
           if (reviews.isEmpty) {
             return Center(
@@ -125,36 +187,6 @@ class ReviewsScreen extends StatelessWidget {
           );
         },
       ),
-    );
-  }
-
-  Widget _buildStat(String value, String label, IconData icon) {
-    return Column(
-      children: [
-        Container(
-          padding: const EdgeInsets.all(12),
-          decoration: BoxDecoration(
-            color: AppColors.primary,
-            borderRadius: BorderRadius.circular(12),
-          ),
-          child: Icon(
-            icon,
-            color: AppColors.accent,
-            size: 24,
-          ),
-        ),
-        const SizedBox(height: 8),
-        Text(
-          value,
-          style: AppTextStyles.h3,
-        ),
-        Text(
-          label,
-          style: AppTextStyles.bodySmall.copyWith(
-            color: AppColors.textSecondary,
-          ),
-        ),
-      ],
     );
   }
 }

@@ -1,9 +1,9 @@
-import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../core/config/supabase_config.dart';
 import '../core/services/logger_service.dart';
 import '../models/job_model.dart';
-import '../models/electrician_model.dart';
+import '../models/homeowner_model.dart';
 import 'database_provider.dart';
 
 class HomeownerProvider extends ChangeNotifier {
@@ -169,5 +169,12 @@ class HomeownerProvider extends ChangeNotifier {
       LoggerService.error('Failed to cancel job', e);
       rethrow;
     }
+  }
+
+  String getCurrentHomeownerId() {
+    if (_databaseProvider.currentHomeowner == null) {
+      throw Exception('No homeowner is currently logged in');
+    }
+    return _databaseProvider.currentHomeowner!.id;
   }
 }

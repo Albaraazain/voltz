@@ -168,6 +168,7 @@ class _SearchScreenState extends State<SearchScreen> {
                       return Padding(
                         padding: const EdgeInsets.only(bottom: 16),
                         child: ElectricianCard(
+                          id: electrician.id,
                           name: electrician.profile.name,
                           rating: electrician.rating,
                           specialty: electrician.specialties.isNotEmpty

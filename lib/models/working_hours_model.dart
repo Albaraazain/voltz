@@ -1,89 +1,114 @@
 import 'package:flutter/material.dart';
 
-class WorkingHours {
-  final Map<String, DaySchedule?> schedule;
-
-  const WorkingHours({
-    this.schedule = const {
-      'monday': DaySchedule(start: '09:00', end: '17:00'),
-      'tuesday': DaySchedule(start: '09:00', end: '17:00'),
-      'wednesday': DaySchedule(start: '09:00', end: '17:00'),
-      'thursday': DaySchedule(start: '09:00', end: '17:00'),
-      'friday': DaySchedule(start: '09:00', end: '17:00'),
-      'saturday': null,
-      'sunday': null,
-    },
-  });
-
-  WorkingHours copyWith({
-    Map<String, DaySchedule?>? schedule,
-  }) {
-    return WorkingHours(
-      schedule: schedule ?? this.schedule,
-    );
-  }
-
-  Map<String, dynamic> toJson() {
-    return {
-      'monday': schedule['monday']?.toJson(),
-      'tuesday': schedule['tuesday']?.toJson(),
-      'wednesday': schedule['wednesday']?.toJson(),
-      'thursday': schedule['thursday']?.toJson(),
-      'friday': schedule['friday']?.toJson(),
-      'saturday': schedule['saturday']?.toJson(),
-      'sunday': schedule['sunday']?.toJson(),
-    };
-  }
-
-  factory WorkingHours.fromJson(Map<String, dynamic> json) {
-    return WorkingHours(
-      schedule: {
-        'monday': json['monday'] != null
-            ? DaySchedule.fromJson(json['monday'])
-            : null,
-        'tuesday': json['tuesday'] != null
-            ? DaySchedule.fromJson(json['tuesday'])
-            : null,
-        'wednesday': json['wednesday'] != null
-            ? DaySchedule.fromJson(json['wednesday'])
-            : null,
-        'thursday': json['thursday'] != null
-            ? DaySchedule.fromJson(json['thursday'])
-            : null,
-        'friday': json['friday'] != null
-            ? DaySchedule.fromJson(json['friday'])
-            : null,
-        'saturday': json['saturday'] != null
-            ? DaySchedule.fromJson(json['saturday'])
-            : null,
-        'sunday': json['sunday'] != null
-            ? DaySchedule.fromJson(json['sunday'])
-            : null,
-      },
-    );
-  }
-}
-
 class DaySchedule {
-  final String start;
-  final String end;
+  final String? start;
+  final String? end;
 
   const DaySchedule({
-    required this.start,
-    required this.end,
+    this.start,
+    this.end,
   });
 
-  Map<String, dynamic> toJson() {
+  factory DaySchedule.fromJson(Map<String, dynamic>? json) {
+    if (json == null) return DaySchedule();
+    return DaySchedule(
+      start: json['start'] as String?,
+      end: json['end'] as String?,
+    );
+  }
+
+  Map<String, dynamic>? toJson() {
+    if (start == null && end == null) return null;
     return {
       'start': start,
       'end': end,
     };
   }
 
-  factory DaySchedule.fromJson(Map<String, dynamic> json) {
+  DaySchedule copyWith({
+    String? start,
+    String? end,
+  }) {
     return DaySchedule(
-      start: json['start'],
-      end: json['end'],
+      start: start ?? this.start,
+      end: end ?? this.end,
+    );
+  }
+}
+
+class WorkingHours {
+  final DaySchedule? monday;
+  final DaySchedule? tuesday;
+  final DaySchedule? wednesday;
+  final DaySchedule? thursday;
+  final DaySchedule? friday;
+  final DaySchedule? saturday;
+  final DaySchedule? sunday;
+
+  const WorkingHours({
+    this.monday,
+    this.tuesday,
+    this.wednesday,
+    this.thursday,
+    this.friday,
+    this.saturday,
+    this.sunday,
+  });
+
+  factory WorkingHours.defaults() => const WorkingHours(
+        monday: DaySchedule(start: '09:00', end: '17:00'),
+        tuesday: DaySchedule(start: '09:00', end: '17:00'),
+        wednesday: DaySchedule(start: '09:00', end: '17:00'),
+        thursday: DaySchedule(start: '09:00', end: '17:00'),
+        friday: DaySchedule(start: '09:00', end: '17:00'),
+        saturday: null,
+        sunday: null,
+      );
+
+  factory WorkingHours.fromJson(Map<String, dynamic>? json) {
+    if (json == null) return WorkingHours();
+
+    return WorkingHours(
+      monday: DaySchedule.fromJson(json['monday'] as Map<String, dynamic>?),
+      tuesday: DaySchedule.fromJson(json['tuesday'] as Map<String, dynamic>?),
+      wednesday:
+          DaySchedule.fromJson(json['wednesday'] as Map<String, dynamic>?),
+      thursday: DaySchedule.fromJson(json['thursday'] as Map<String, dynamic>?),
+      friday: DaySchedule.fromJson(json['friday'] as Map<String, dynamic>?),
+      saturday: DaySchedule.fromJson(json['saturday'] as Map<String, dynamic>?),
+      sunday: DaySchedule.fromJson(json['sunday'] as Map<String, dynamic>?),
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'monday': monday?.toJson(),
+      'tuesday': tuesday?.toJson(),
+      'wednesday': wednesday?.toJson(),
+      'thursday': thursday?.toJson(),
+      'friday': friday?.toJson(),
+      'saturday': saturday?.toJson(),
+      'sunday': sunday?.toJson(),
+    };
+  }
+
+  WorkingHours copyWith({
+    DaySchedule? monday,
+    DaySchedule? tuesday,
+    DaySchedule? wednesday,
+    DaySchedule? thursday,
+    DaySchedule? friday,
+    DaySchedule? saturday,
+    DaySchedule? sunday,
+  }) {
+    return WorkingHours(
+      monday: monday ?? this.monday,
+      tuesday: tuesday ?? this.tuesday,
+      wednesday: wednesday ?? this.wednesday,
+      thursday: thursday ?? this.thursday,
+      friday: friday ?? this.friday,
+      saturday: saturday ?? this.saturday,
+      sunday: sunday ?? this.sunday,
     );
   }
 }
