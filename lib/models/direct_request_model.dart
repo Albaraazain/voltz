@@ -1,136 +1,42 @@
 import 'package:flutter/material.dart';
 import 'job_model.dart';
+import 'package:intl/intl.dart';
 
 class DirectRequest {
-  final String id;
-  final String jobId;
-  final String homeownerId;
-  final String electricianId;
-  final DateTime preferredDate;
-  final TimeOfDay preferredTime;
-  final String status; // PENDING, ACCEPTED, DECLINED
-  final String? message;
-  final DateTime createdAt;
-  final DateTime updatedAt;
-
-  // Status constants
   static const String STATUS_PENDING = 'PENDING';
   static const String STATUS_ACCEPTED = 'ACCEPTED';
   static const String STATUS_DECLINED = 'DECLINED';
 
-  const DirectRequest({
+  final String id;
+  final String homeownerId;
+  final String electricianId;
+  final String description;
+  final String preferredDate;
+  final String preferredTime;
+  final String status;
+  final String? declineReason;
+  final String? alternativeDate;
+  final String? alternativeTime;
+  final String? alternativeMessage;
+  final DateTime createdAt;
+  final DateTime updatedAt;
+
+  DirectRequest({
     required this.id,
-    required this.jobId,
     required this.homeownerId,
     required this.electricianId,
+    required this.description,
     required this.preferredDate,
     required this.preferredTime,
     required this.status,
-    this.message,
+    this.declineReason,
+    this.alternativeDate,
+    this.alternativeTime,
+    this.alternativeMessage,
     required this.createdAt,
     required this.updatedAt,
   });
 
-  // Create from JSON (Supabase response)
-  factory DirectRequest.fromJson(Map<String, dynamic> json) {
-    return DirectRequest(
-      id: json['id'] as String,
-      jobId: json['job_id'] as String,
-      homeownerId: json['homeowner_id'] as String,
-      electricianId: json['electrician_id'] as String,
-      preferredDate: DateTime.parse(json['preferred_date'] as String),
-      preferredTime: _timeFromString(json['preferred_time'] as String),
-      status: json['status'] as String,
-      message: json['message'] as String?,
-      createdAt: DateTime.parse(json['created_at'] as String),
-      updatedAt: DateTime.parse(json['updated_at'] as String),
-    );
-  }
-
-  // Convert to JSON for Supabase
-  Map<String, dynamic> toJson() {
-    return {
-      'id': id,
-      'job_id': jobId,
-      'homeowner_id': homeownerId,
-      'electrician_id': electricianId,
-      'preferred_date': preferredDate.toIso8601String().split('T')[0],
-      'preferred_time': _timeToString(preferredTime),
-      'status': status,
-      'message': message,
-      'created_at': createdAt.toIso8601String(),
-      'updated_at': updatedAt.toIso8601String(),
-    };
-  }
-
-  // Helper method to convert TimeOfDay to string
-  static String _timeToString(TimeOfDay time) {
-    return '${time.hour.toString().padLeft(2, '0')}:${time.minute.toString().padLeft(2, '0')}:00';
-  }
-
-  // Helper method to convert string to TimeOfDay
-  static TimeOfDay _timeFromString(String time) {
-    final parts = time.split(':');
-    return TimeOfDay(
-      hour: int.parse(parts[0]),
-      minute: int.parse(parts[1]),
-    );
-  }
-
-  // Create a copy with some fields updated
-  DirectRequest copyWith({
-    String? id,
-    String? jobId,
-    String? homeownerId,
-    String? electricianId,
-    DateTime? preferredDate,
-    TimeOfDay? preferredTime,
-    String? status,
-    String? message,
-    DateTime? createdAt,
-    DateTime? updatedAt,
-  }) {
-    return DirectRequest(
-      id: id ?? this.id,
-      jobId: jobId ?? this.jobId,
-      homeownerId: homeownerId ?? this.homeownerId,
-      electricianId: electricianId ?? this.electricianId,
-      preferredDate: preferredDate ?? this.preferredDate,
-      preferredTime: preferredTime ?? this.preferredTime,
-      status: status ?? this.status,
-      message: message ?? this.message,
-      createdAt: createdAt ?? this.createdAt,
-      updatedAt: updatedAt ?? this.updatedAt,
-    );
-  }
-
-  // Get formatted preferred time
-  String get formattedPreferredTime {
-    final hour = preferredTime.hour == 0
-        ? 12
-        : (preferredTime.hour > 12
-            ? preferredTime.hour - 12
-            : preferredTime.hour);
-    final minute = preferredTime.minute.toString().padLeft(2, '0');
-    final period = preferredTime.hour < 12 ? 'AM' : 'PM';
-    return '$hour:$minute $period';
-  }
-
-  // Get formatted preferred date
-  String get formattedPreferredDate {
-    return '${preferredDate.year}-${preferredDate.month.toString().padLeft(2, '0')}-${preferredDate.day.toString().padLeft(2, '0')}';
-  }
-
-  // Check if request is pending
-  bool get isPending => status == STATUS_PENDING;
-
-  // Check if request is accepted
-  bool get isAccepted => status == STATUS_ACCEPTED;
-
-  // Check if request is declined
-  bool get isDeclined => status == STATUS_DECLINED;
-
-  // Get status text for display
   String get statusText {
     switch (status) {
       case STATUS_PENDING:
@@ -140,35 +46,54 @@ class DirectRequest {
       case STATUS_DECLINED:
         return 'Declined';
       default:
-        return status;
+        return 'Unknown';
     }
   }
 
-  @override
-  bool operator ==(Object other) {
-    if (identical(this, other)) return true;
-    return other is DirectRequest &&
-        other.id == id &&
-        other.jobId == jobId &&
-        other.homeownerId == homeownerId &&
-        other.electricianId == electricianId &&
-        other.preferredDate == preferredDate &&
-        other.preferredTime == preferredTime &&
-        other.status == status &&
-        other.message == message;
+  String get formattedPreferredDate {
+    final date = DateTime.parse(preferredDate);
+    return DateFormat('MMM d, yyyy').format(date);
   }
 
-  @override
-  int get hashCode {
-    return Object.hash(
-      id,
-      jobId,
-      homeownerId,
-      electricianId,
-      preferredDate,
-      preferredTime,
-      status,
-      message,
+  String get formattedPreferredTime {
+    return preferredTime;
+  }
+
+  String? get message => alternativeMessage;
+
+  factory DirectRequest.fromJson(Map<String, dynamic> json) {
+    return DirectRequest(
+      id: json['id'],
+      homeownerId: json['homeowner_id'],
+      electricianId: json['electrician_id'],
+      description: json['description'],
+      preferredDate: json['preferred_date'],
+      preferredTime: json['preferred_time'],
+      status: json['status'],
+      declineReason: json['decline_reason'],
+      alternativeDate: json['alternative_date'],
+      alternativeTime: json['alternative_time'],
+      alternativeMessage: json['alternative_message'],
+      createdAt: DateTime.parse(json['created_at']),
+      updatedAt: DateTime.parse(json['updated_at']),
     );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id,
+      'homeowner_id': homeownerId,
+      'electrician_id': electricianId,
+      'description': description,
+      'preferred_date': preferredDate,
+      'preferred_time': preferredTime,
+      'status': status,
+      'decline_reason': declineReason,
+      'alternative_date': alternativeDate,
+      'alternative_time': alternativeTime,
+      'alternative_message': alternativeMessage,
+      'created_at': createdAt.toIso8601String(),
+      'updated_at': updatedAt.toIso8601String(),
+    };
   }
 }
