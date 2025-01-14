@@ -62,7 +62,7 @@ class JobProvider extends ChangeNotifier {
         if (paymentDetails != null) 'payment_details': paymentDetails,
       };
 
-      await _supabase.from('jobs').update(updateData).eq('id', jobId);
+      await _supabase.from('jobs').update(updateData).match({'id': jobId});
 
       if (_jobs.hasData && _jobs.data != null) {
         final updatedJobs = _jobs.data!.map((job) {
@@ -105,7 +105,7 @@ class JobProvider extends ChangeNotifier {
           'verification_details': verificationDetails,
       };
 
-      await _supabase.from('jobs').update(updateData).eq('id', jobId);
+      await _supabase.from('jobs').update(updateData).match({'id': jobId});
 
       if (_jobs.hasData && _jobs.data != null) {
         final updatedJobs = _jobs.data!.map((job) {
@@ -129,23 +129,49 @@ class JobProvider extends ChangeNotifier {
     }
   }
 
-  Future<void> loadJobs(String homeownerId) async {
+  Future<void> loadJobs(String userId, {bool isElectrician = false}) async {
     try {
-      LoggerService.info('Loading jobs for homeowner: $homeownerId');
+      LoggerService.info(
+          'Loading jobs for ${isElectrician ? 'electrician' : 'homeowner'}: $userId');
       _jobs = ApiResponse.loading();
       notifyListeners();
 
-      final response = await _supabase
-          .from('jobs')
-          .select()
-          .eq('homeowner_id', homeownerId)
-          .order('created_at', ascending: false);
+      var query = _supabase.from('jobs').select('''
+            *,
+            homeowner:homeowners (
+              *,
+              profile:profiles (*)
+            ),
+            electrician:electricians (
+              *,
+              profile:profiles (*)
+            )
+          ''');
+
+      if (isElectrician) {
+        // For electricians, show:
+        // 1. Jobs assigned to them with status in_progress
+        // 2. Unassigned jobs with status pending
+        query = query.or(
+            'and(electrician_id.eq.$userId,status.eq.${Job.STATUS_IN_PROGRESS}),and(electrician_id.is.null,status.eq.${Job.STATUS_PENDING})');
+      } else {
+        // For homeowners, show all their jobs except cancelled ones
+        query = query
+            .eq('homeowner_id', userId)
+            .neq('status', Job.STATUS_CANCELLED);
+      }
+
+      final response = await query.order('created_at', ascending: false);
 
       final jobsList =
           (response as List).map((job) => Job.fromJson(job)).toList();
 
+      LoggerService.debug(
+          'Raw jobs response: ${response.map((j) => '${j['id']}: ${j['status']}, electrician_id: ${j['electrician_id']}').join(', ')}');
+
       _jobs = ApiResponse.success(jobsList);
-      LoggerService.debug('Loaded ${jobsList.length} jobs');
+      LoggerService.debug(
+          'Loaded ${jobsList.length} jobs with statuses: ${jobsList.map((j) => '${j.id}: ${j.status}, electrician: ${j.electricianId}').join(', ')}');
     } catch (error, stackTrace) {
       LoggerService.error('Failed to load jobs', error, stackTrace);
       _jobs = ApiResponse.error(error, stackTrace);
@@ -179,18 +205,48 @@ class JobProvider extends ChangeNotifier {
     }
   }
 
-  Future<void> updateJobStatus(String jobId, String newStatus) async {
+  Future<void> updateJobStatus(String jobId, String newStatus,
+      {String? electricianId}) async {
     try {
-      LoggerService.info('Updating job status: $jobId to $newStatus');
+      LoggerService.info(
+          'Updating job status: $jobId to $newStatus (electricianId: $electricianId)');
 
-      await _supabase
+      if (!Job.isValidStatus(newStatus)) {
+        throw Exception('Invalid job status: $newStatus');
+      }
+
+      final updateData = {
+        'status': newStatus,
+        if (newStatus == Job.STATUS_IN_PROGRESS && electricianId != null)
+          'electrician_id': electricianId,
+      };
+
+      LoggerService.debug('Updating job with data: $updateData');
+
+      // First fetch the current job to ensure it exists and we have access
+      final currentJob =
+          await _supabase.from('jobs').select().eq('id', jobId).single();
+
+      if (currentJob == null) {
+        throw Exception('Job not found: $jobId');
+      }
+
+      // Then perform the update
+      final response = await _supabase
           .from('jobs')
-          .update({'status': newStatus}).eq('id', jobId);
+          .update(updateData)
+          .eq('id', jobId)
+          .select()
+          .single();
 
+      // Update local state
       if (_jobs.hasData && _jobs.data != null) {
         final updatedJobs = _jobs.data!.map((job) {
           if (job.id == jobId) {
-            return job.copyWith(status: newStatus);
+            final updatedJob = Job.fromJson(response);
+            LoggerService.debug(
+                'Updated job ${job.id} from status ${job.status} to ${updatedJob.status}');
+            return updatedJob;
           }
           return job;
         }).toList();
@@ -203,5 +259,70 @@ class JobProvider extends ChangeNotifier {
       LoggerService.error('Failed to update job status', error, stackTrace);
       rethrow;
     }
+  }
+
+  Future<void> acceptJob(String jobId, String electricianId) async {
+    try {
+      LoggerService.info(
+          'Accepting job: $jobId by electrician: $electricianId');
+
+      // When accepting a job, we set it to in_progress and assign the electrician
+      await updateJobStatus(jobId, Job.STATUS_IN_PROGRESS,
+          electricianId: electricianId);
+
+      // Add a small delay to ensure the database has processed the update
+      await Future.delayed(const Duration(milliseconds: 500));
+
+      // Refresh jobs list to update UI
+      await loadJobs(electricianId, isElectrician: true);
+    } catch (error, stackTrace) {
+      LoggerService.error('Failed to accept job', error, stackTrace);
+      rethrow;
+    }
+  }
+
+  Future<void> declineJob(String jobId, String electricianId) async {
+    try {
+      LoggerService.info(
+          'Declining job: $jobId by electrician: $electricianId');
+
+      // When declining, we don't update electrician_id so other electricians can still see it
+      await updateJobStatus(jobId, Job.STATUS_CANCELLED);
+
+      // Refresh jobs list to update UI
+      await loadJobs(electricianId, isElectrician: true);
+    } catch (error, stackTrace) {
+      LoggerService.error('Failed to decline job', error, stackTrace);
+      rethrow;
+    }
+  }
+
+  // Helper method to get jobs by type
+  List<Job> getJobsByType(String type, String electricianId) {
+    if (!_jobs.hasData || _jobs.data == null) return [];
+
+    LoggerService.debug('Getting jobs for type: $type');
+    return _jobs.data!.where((job) {
+      if (type == 'new') {
+        // Show pending jobs that are either unassigned or assigned to this electrician
+        final isPending = job.status == Job.STATUS_PENDING;
+        final isUnassigned = job.electricianId == null;
+        final isAssignedToMe = job.electricianId == electricianId;
+
+        LoggerService.debug(
+            'Filtering job ${job.id} - status: ${job.status}, electricianId: ${job.electricianId}, isPending: $isPending, isUnassigned: $isUnassigned, isAssignedToMe: $isAssignedToMe');
+
+        return isPending && (isUnassigned || isAssignedToMe);
+      } else {
+        // Show in_progress jobs assigned to this electrician
+        final isInProgress = job.status == Job.STATUS_IN_PROGRESS;
+        final isAssignedToMe = job.electricianId == electricianId;
+
+        LoggerService.debug(
+            'Filtering job ${job.id} - status: ${job.status}, electricianId: ${job.electricianId}, isInProgress: $isInProgress, isAssignedToMe: $isAssignedToMe');
+
+        return isInProgress && isAssignedToMe;
+      }
+    }).toList();
   }
 }
