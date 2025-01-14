@@ -11,6 +11,7 @@ enum UserType { electrician, homeowner, none }
 class AuthProvider with ChangeNotifier {
   final AuthService _authService = AuthService();
   StreamSubscription<AuthState>? _authStateSubscription;
+  late final Future<void> initializationCompleted;
 
   bool _isAuthenticated = false;
   UserType _userType = UserType.none;
@@ -26,7 +27,8 @@ class AuthProvider with ChangeNotifier {
   String? get fullName => _profile?['name'];
 
   AuthProvider() {
-    _initializeAuth();
+    // Initialize the completion future
+    initializationCompleted = _initializeAuth();
   }
 
   Future<void> _initializeAuth() async {
@@ -203,6 +205,41 @@ class AuthProvider with ChangeNotifier {
       // Resume the auth state listener in case of error
       _authStateSubscription?.resume();
       LoggerService.error('Failed to sign out and navigate', e, stackTrace);
+      rethrow;
+    }
+  }
+
+  Future<void> deleteAccount(BuildContext context) async {
+    try {
+      // First, detach the auth state listener to prevent unwanted updates
+      _authStateSubscription?.pause();
+
+      // Clear the state immediately but don't notify
+      _isAuthenticated = false;
+      _userType = UserType.none;
+      _user = null;
+      _profile = null;
+
+      // Delete the account
+      await _authService.deleteAccount();
+
+      // Navigate to welcome screen
+      if (context.mounted) {
+        await Navigator.of(context).pushAndRemoveUntil(
+          MaterialPageRoute(builder: (_) => const WelcomeScreen()),
+          (route) => false,
+        );
+      }
+
+      // Finally notify listeners after navigation is complete
+      notifyListeners();
+
+      // Resume the auth state listener
+      _authStateSubscription?.resume();
+    } catch (e, stackTrace) {
+      // Resume the auth state listener in case of error
+      _authStateSubscription?.resume();
+      LoggerService.error('Failed to delete account', e, stackTrace);
       rethrow;
     }
   }
