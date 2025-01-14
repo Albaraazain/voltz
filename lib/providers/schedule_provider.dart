@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import '../core/services/logger_service.dart';
 import '../models/working_hours_model.dart' as wh;
 import '../models/schedule_slot_model.dart';
 import '../models/reschedule_request_model.dart';
@@ -37,34 +38,49 @@ class ScheduleProvider extends ChangeNotifier {
   }
 
   // Working Hours Methods
-  Future<wh.WorkingHours> setWorkingHours({
-    required String electricianId,
-    required int dayOfWeek,
-    required String startTime,
-    required String endTime,
-    required bool isWorkingDay,
-  }) async {
+  Future<wh.WorkingHours> loadWorkingHours(String electricianId) async {
     try {
       _loading = true;
       _error = null;
       notifyListeners();
 
       final response = await _supabase
-          .from('working_hours')
-          .upsert({
-            'electrician_id': electricianId,
-            'day_of_week': dayOfWeek,
-            'start_time': startTime,
-            'end_time': endTime,
-            'is_working_day': isWorkingDay,
-          })
-          .select()
+          .from('electricians')
+          .select('working_hours')
+          .eq('id', electricianId)
           .single();
 
-      final workingHours = wh.WorkingHours.fromJson(response);
+      final workingHours = wh.WorkingHours.fromJson(response['working_hours']);
       _loading = false;
       notifyListeners();
       return workingHours;
+    } catch (e) {
+      _error = e.toString();
+      _loading = false;
+      notifyListeners();
+      throw e;
+    }
+  }
+
+  Future<wh.WorkingHours> updateWorkingHours(
+      String electricianId, Map<String, dynamic> workingHours) async {
+    try {
+      _loading = true;
+      _error = null;
+      notifyListeners();
+
+      final response = await _supabase
+          .from('electricians')
+          .update({'working_hours': workingHours})
+          .eq('id', electricianId)
+          .select('working_hours')
+          .single();
+
+      final updatedWorkingHours =
+          wh.WorkingHours.fromJson(response['working_hours']);
+      _loading = false;
+      notifyListeners();
+      return updatedWorkingHours;
     } catch (e) {
       _error = e.toString();
       _loading = false;
@@ -84,30 +100,64 @@ class ScheduleProvider extends ChangeNotifier {
     String? recurringRule,
   }) async {
     try {
+      LoggerService.info('Creating schedule slot with parameters:\n'
+          'Electrician ID: $electricianId\n'
+          'Date: ${date.toIso8601String().split('T')[0]}\n'
+          'Start Time: $startTime\n'
+          'End Time: $endTime\n'
+          'Status: $status');
+
       _loading = true;
       _error = null;
       notifyListeners();
 
-      final response = await _supabase
-          .from('schedule_slots')
-          .insert({
-            'electrician_id': electricianId,
-            'date': date.toIso8601String().split('T')[0],
-            'start_time': startTime,
-            'end_time': endTime,
-            'status': status,
-            'job_id': jobId,
-            'recurring_rule': recurringRule,
-          })
-          .select()
-          .single();
+      final data = {
+        'electrician_id': electricianId,
+        'date': date.toIso8601String().split('T')[0],
+        'start_time': startTime,
+        'end_time': endTime,
+        'status': status,
+        'job_id': jobId,
+        'recurring_rule': recurringRule,
+      };
 
-      final slot = ScheduleSlot.fromJson(response);
+      LoggerService.debug('Inserting data into schedule_slots table: $data');
+
+      final response =
+          await _supabase.from('schedule_slots').insert(data).select().single();
+
+      LoggerService.debug('Database response: $response');
+
+      final scheduleSlot = ScheduleSlot.fromJson(response);
+      _scheduleSlots.add(scheduleSlot);
+
+      LoggerService.info('Schedule slot created successfully:\n'
+          'Slot ID: ${scheduleSlot.id}\n'
+          'Date: ${scheduleSlot.date}\n'
+          'Time: ${scheduleSlot.startTime} - ${scheduleSlot.endTime}');
+
       _loading = false;
       notifyListeners();
-      return slot;
-    } catch (e) {
-      _error = e.toString();
+      return scheduleSlot;
+    } catch (e, stackTrace) {
+      final errorMsg = e.toString();
+      LoggerService.error(
+        'Failed to create schedule slot',
+        e,
+        stackTrace,
+      );
+
+      if (e is PostgrestException) {
+        LoggerService.error(
+          'PostgreSQL Error Details:\n'
+          'Code: ${e.code}\n'
+          'Message: ${e.message}\n'
+          'Details: ${e.details}\n'
+          'Hint: ${e.hint}',
+        );
+      }
+
+      _error = errorMsg;
       _loading = false;
       notifyListeners();
       throw e;
@@ -199,6 +249,10 @@ class ScheduleProvider extends ChangeNotifier {
     required DateTime date,
   }) async {
     try {
+      LoggerService.info('Loading schedule slots for:\n'
+          'Electrician ID: $electricianId\n'
+          'Date: ${date.toIso8601String().split('T')[0]}');
+
       _loading = true;
       _error = null;
       notifyListeners();
@@ -209,38 +263,24 @@ class ScheduleProvider extends ChangeNotifier {
           .eq('electrician_id', electricianId)
           .eq('date', date.toIso8601String().split('T')[0]);
 
+      LoggerService.debug('Found ${response.length} slots');
+
       _scheduleSlots = response
           .map<ScheduleSlot>((json) => ScheduleSlot.fromJson(json))
           .toList();
+
+      LoggerService.info('Successfully loaded schedule slots');
+
       _loading = false;
       notifyListeners();
       return _scheduleSlots;
-    } catch (e) {
-      _error = e.toString();
-      _loading = false;
-      notifyListeners();
-      throw e;
-    }
-  }
+    } catch (e, stackTrace) {
+      LoggerService.error(
+        'Failed to load schedule slots',
+        e,
+        stackTrace,
+      );
 
-  Future<List<wh.WorkingHours>> loadWorkingHours(String electricianId) async {
-    try {
-      _loading = true;
-      _error = null;
-      notifyListeners();
-
-      final response = await _supabase
-          .from('working_hours')
-          .select()
-          .eq('electrician_id', electricianId);
-
-      final workingHours = response
-          .map<wh.WorkingHours>((json) => wh.WorkingHours.fromJson(json))
-          .toList();
-      _loading = false;
-      notifyListeners();
-      return workingHours;
-    } catch (e) {
       _error = e.toString();
       _loading = false;
       notifyListeners();
@@ -322,8 +362,10 @@ class ScheduleProvider extends ChangeNotifier {
       _error = null;
       notifyListeners();
 
-      final response = await _supabase.from('reschedule_requests').select().or(
-          'requested_by_id.eq.$userId,job.${userType.toLowerCase()}_id.eq.$userId');
+      final response = await _supabase
+          .from('reschedule_requests')
+          .select('*, job:jobs(id, homeowner_id, electrician_id)')
+          .or('requested_by_id.eq.$userId,job->homeowner_id.eq.$userId,job->electrician_id.eq.$userId');
 
       _rescheduleRequests = response
           .map<RescheduleRequest>((json) => RescheduleRequest.fromJson(json))
