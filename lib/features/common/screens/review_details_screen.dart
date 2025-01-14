@@ -37,7 +37,9 @@ class ReviewDetailsScreen extends StatelessWidget {
                   radius: 30,
                   backgroundColor: AppColors.primary,
                   child: Text(
-                    review.homeowner.profile.name[0].toUpperCase(),
+                    review.homeowner?.profile?.name?.characters.first
+                            .toUpperCase() ??
+                        'U',
                     style: AppTextStyles.h3.copyWith(
                       color: AppColors.accent,
                     ),
@@ -48,11 +50,11 @@ class ReviewDetailsScreen extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      review.homeowner.profile.name,
+                      review.homeowner?.profile?.name ?? 'Unknown User',
                       style: AppTextStyles.h3,
                     ),
                     Text(
-                      review.createdAt.toString(),
+                      review.formattedDate,
                       style: AppTextStyles.bodySmall.copyWith(
                         color: AppColors.textSecondary,
                       ),
@@ -82,42 +84,46 @@ class ReviewDetailsScreen extends StatelessWidget {
               PhotoGallery(photos: review.photos),
             ],
 
-            const SizedBox(height: 24),
-            // Job Details
-            Text(
-              'Job Details',
-              style: AppTextStyles.h3,
-            ),
-            const SizedBox(height: 16),
-            Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: AppColors.surface,
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: AppColors.border),
+            if (review.job != null) ...[
+              const SizedBox(height: 24),
+              // Job Details
+              Text(
+                'Job Details',
+                style: AppTextStyles.h3,
               ),
-              child: Column(
-                children: [
-                  _buildJobDetail(
-                    'Service Type',
-                    review.job.title,
-                    Icons.work_outline,
-                  ),
-                  const Divider(height: 24),
-                  _buildJobDetail(
-                    'Date',
-                    review.job.date.toString(),
-                    Icons.calendar_today_outlined,
-                  ),
-                  const Divider(height: 24),
-                  _buildJobDetail(
-                    'Amount',
-                    '\$${review.job.price.toStringAsFixed(2)}',
-                    Icons.attach_money,
-                  ),
-                ],
+              const SizedBox(height: 16),
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: AppColors.surface,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: AppColors.border),
+                ),
+                child: Column(
+                  children: [
+                    _buildJobDetail(
+                      'Service Type',
+                      review.job?.title ?? 'N/A',
+                      Icons.work_outline,
+                    ),
+                    const Divider(height: 24),
+                    _buildJobDetail(
+                      'Date',
+                      review.job?.date?.toString() ?? 'N/A',
+                      Icons.calendar_today_outlined,
+                    ),
+                    const Divider(height: 24),
+                    _buildJobDetail(
+                      'Amount',
+                      review.job?.price != null
+                          ? '\$${review.job!.price.toStringAsFixed(2)}'
+                          : 'N/A',
+                      Icons.attach_money,
+                    ),
+                  ],
+                ),
               ),
-            ),
+            ],
           ],
         ),
       ),
