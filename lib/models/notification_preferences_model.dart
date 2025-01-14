@@ -17,6 +17,8 @@ class NotificationPreferences {
     this.quietHoursEnd = const TimeOfDay(hour: 7, minute: 0),
   });
 
+  factory NotificationPreferences.defaults() => const NotificationPreferences();
+
   Map<String, dynamic> toJson() {
     return {
       'pushEnabled': pushEnabled,
