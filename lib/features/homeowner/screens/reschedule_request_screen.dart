@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../../core/constants/colors.dart';
 import '../../../core/constants/text_styles.dart';
-import '../../../models/reschedule_request_model.dart';
 import '../../../providers/schedule_provider.dart';
 import '../../common/widgets/custom_button.dart';
 import '../../common/widgets/loading_indicator.dart';
