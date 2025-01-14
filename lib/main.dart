@@ -10,6 +10,8 @@ import 'providers/electrician_provider.dart';
 import 'providers/homeowner_provider.dart';
 import 'providers/job_provider.dart';
 import 'providers/electrician_stats_provider.dart';
+import 'providers/availability_provider.dart';
+import 'providers/schedule_provider.dart';
 import 'features/common/screens/splash_screen.dart';
 import 'features/homeowner/screens/homeowner_main_screen.dart';
 import 'features/electrician/screens/electrician_main_screen.dart';
@@ -145,6 +147,28 @@ class MyApp extends StatelessWidget {
           create: (_) {
             LoggerService.info('Initializing ElectricianStatsProvider');
             return ElectricianStatsProvider(SupabaseConfig.client);
+          },
+        ),
+        ChangeNotifierProvider(
+          create: (_) {
+            LoggerService.info('Initializing AvailabilityProvider');
+            return AvailabilityProvider(SupabaseConfig.client);
+          },
+        ),
+        ChangeNotifierProxyProvider<AvailabilityProvider, ScheduleProvider>(
+          create: (context) {
+            LoggerService.info(
+                'Creating ScheduleProvider with AvailabilityProvider dependency');
+            return ScheduleProvider(
+              SupabaseConfig.client,
+              context.read<AvailabilityProvider>(),
+            );
+          },
+          update: (context, availability, previous) {
+            LoggerService.info(
+                'Updating ScheduleProvider with new AvailabilityProvider instance');
+            return previous ??
+                ScheduleProvider(SupabaseConfig.client, availability);
           },
         ),
       ],
