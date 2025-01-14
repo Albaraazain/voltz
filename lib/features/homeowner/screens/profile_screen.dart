@@ -207,6 +207,42 @@ class ProfileScreen extends StatelessWidget {
                               .signOutAndNavigate(context);
                         },
                       ),
+                      const SizedBox(height: 16),
+                      ProfileMenuItem(
+                        icon: Icons.delete_forever,
+                        title: 'Delete Account',
+                        iconColor: Colors.red,
+                        titleColor: Colors.red,
+                        onTap: () {
+                          showDialog(
+                            context: context,
+                            builder: (context) => AlertDialog(
+                              title: const Text('Delete Account'),
+                              content: const Text(
+                                'Are you sure you want to delete your account? This action cannot be undone.',
+                              ),
+                              actions: [
+                                TextButton(
+                                  onPressed: () => Navigator.pop(context),
+                                  child: const Text('Cancel'),
+                                ),
+                                TextButton(
+                                  onPressed: () {
+                                    Navigator.pop(context);
+                                    context
+                                        .read<AuthProvider>()
+                                        .deleteAccount(context);
+                                  },
+                                  child: const Text(
+                                    'Delete',
+                                    style: TextStyle(color: Colors.red),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          );
+                        },
+                      ),
                     ],
                   ),
                 ),
