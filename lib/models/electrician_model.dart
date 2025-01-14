@@ -65,41 +65,29 @@ class Electrician {
 
   factory Electrician.fromJson(Map<String, dynamic> json) {
     return Electrician(
-      id: json['id'] ?? '',
-      profile: json['profile'] != null
-          ? Profile.fromJson(json['profile'])
-          : Profile(
-              id: json['profile_id'] ?? '',
-              email: '',
-              userType: 'electrician',
-              name: '',
-              createdAt: DateTime.parse(
-                  json['created_at'] ?? DateTime.now().toIso8601String()),
-            ),
+      id: json['id'],
+      profile: Profile.fromJson(json['profile']),
       profileImage: json['profile_image'],
       phone: json['phone'] ?? '',
       licenseNumber: json['license_number'] ?? '',
       yearsOfExperience: json['years_of_experience'] ?? 0,
-      hourlyRate: (json['hourly_rate'] ?? 0.0).toDouble(),
-      rating: (json['rating'] ?? 0.0).toDouble(),
+      hourlyRate: (json['hourly_rate'] as num?)?.toDouble() ?? 0.0,
+      rating: (json['rating'] as num?)?.toDouble() ?? 0.0,
       jobsCompleted: json['jobs_completed'] ?? 0,
       isAvailable: json['is_available'] ?? true,
       isVerified: json['is_verified'] ?? false,
-      services: json['services'] != null
-          ? (json['services'] as List).map((s) => Service.fromJson(s)).toList()
-          : [],
-      specialties: json['specialties'] != null
-          ? List<String>.from(json['specialties'])
-          : [],
-      workingHours: json['working_hours'] != null
-          ? WorkingHours.fromJson(json['working_hours'])
-          : const WorkingHours(),
+      services: (json['services'] as List?)
+              ?.map((s) => Service.fromJson(s))
+              .toList() ??
+          [],
+      specialties: List<String>.from(json['specialties'] ?? []),
+      workingHours: WorkingHours.fromJson(json['working_hours']),
       paymentInfo: json['payment_info'] != null
           ? PaymentInfo.fromJson(json['payment_info'])
           : null,
       notificationPreferences: json['notification_preferences'] != null
           ? NotificationPreferences.fromJson(json['notification_preferences'])
-          : const NotificationPreferences(),
+          : NotificationPreferences.defaults(),
     );
   }
 
@@ -140,5 +128,69 @@ class Electrician {
       notificationPreferences:
           notificationPreferences ?? this.notificationPreferences,
     );
+  }
+
+  // Helper methods for working hours
+  bool isDayEnabled(String day) {
+    switch (day.toLowerCase()) {
+      case 'monday':
+        return workingHours.monday != null;
+      case 'tuesday':
+        return workingHours.tuesday != null;
+      case 'wednesday':
+        return workingHours.wednesday != null;
+      case 'thursday':
+        return workingHours.thursday != null;
+      case 'friday':
+        return workingHours.friday != null;
+      case 'saturday':
+        return workingHours.saturday != null;
+      case 'sunday':
+        return workingHours.sunday != null;
+      default:
+        return false;
+    }
+  }
+
+  String? getDayStartTime(String day) {
+    switch (day.toLowerCase()) {
+      case 'monday':
+        return workingHours.monday?.start;
+      case 'tuesday':
+        return workingHours.tuesday?.start;
+      case 'wednesday':
+        return workingHours.wednesday?.start;
+      case 'thursday':
+        return workingHours.thursday?.start;
+      case 'friday':
+        return workingHours.friday?.start;
+      case 'saturday':
+        return workingHours.saturday?.start;
+      case 'sunday':
+        return workingHours.sunday?.start;
+      default:
+        return null;
+    }
+  }
+
+  String? getDayEndTime(String day) {
+    switch (day.toLowerCase()) {
+      case 'monday':
+        return workingHours.monday?.end;
+      case 'tuesday':
+        return workingHours.tuesday?.end;
+      case 'wednesday':
+        return workingHours.wednesday?.end;
+      case 'thursday':
+        return workingHours.thursday?.end;
+      case 'friday':
+        return workingHours.friday?.end;
+      case 'saturday':
+        return workingHours.saturday?.end;
+      case 'sunday':
+        return workingHours.sunday?.end;
+      default:
+        return null;
+    }
   }
 }
