@@ -34,7 +34,9 @@ class ReviewListItem extends StatelessWidget {
                   radius: 20,
                   backgroundColor: AppColors.primary,
                   child: Text(
-                    review.homeowner.profile.name[0].toUpperCase(),
+                    review.homeowner?.profile?.name?.characters.first
+                            .toUpperCase() ??
+                        'U',
                     style: AppTextStyles.bodyLarge.copyWith(
                       color: AppColors.surface,
                     ),
@@ -46,11 +48,11 @@ class ReviewListItem extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        review.homeowner.profile.name,
+                        review.homeowner?.profile?.name ?? 'Unknown User',
                         style: AppTextStyles.bodyLarge,
                       ),
                       Text(
-                        review.createdAt.toString(),
+                        review.formattedDate,
                         style: AppTextStyles.bodySmall.copyWith(
                           color: AppColors.textSecondary,
                         ),
