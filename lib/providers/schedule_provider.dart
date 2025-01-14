@@ -4,6 +4,7 @@ import '../core/services/logger_service.dart';
 import '../core/services/notification_service.dart';
 import '../models/working_hours_model.dart';
 import '../models/reschedule_request_model.dart';
+import '../models/availability_slot_model.dart';
 import 'availability_provider.dart';
 
 class ScheduleProvider extends ChangeNotifier {
@@ -13,12 +14,20 @@ class ScheduleProvider extends ChangeNotifier {
   Map<String, List<ScheduleSlot>> _scheduleSlots = {};
   List<RescheduleRequest> _rescheduleRequests = [];
   String? _error;
+  String? _currentHomeownerId;
 
   ScheduleProvider(this._client, this._availabilityProvider);
 
   bool get isLoading => _isLoading;
   Map<String, List<ScheduleSlot>> get scheduleSlots => _scheduleSlots;
   String? get error => _error;
+  String? get currentHomeownerId => _currentHomeownerId;
+
+  // Set current homeowner ID
+  void setCurrentHomeownerId(String id) {
+    _currentHomeownerId = id;
+    notifyListeners();
+  }
 
   List<RescheduleRequest> get pendingRescheduleRequests => _rescheduleRequests
       .where((request) => request.status == RescheduleRequest.STATUS_PENDING)
@@ -419,6 +428,46 @@ class ScheduleProvider extends ChangeNotifier {
       LoggerService.error('Error proposing new time', e, stackTrace);
       _error = 'Failed to propose new time';
       rethrow;
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
+  }
+
+  List<ScheduleSlot> getBookedSlots(DateTime date, String electricianId) {
+    final dateStr = date.toIso8601String().split('T')[0];
+    return _scheduleSlots[dateStr]
+            ?.where((slot) =>
+                slot.electricianId == electricianId &&
+                slot.status == ScheduleSlot.STATUS_BOOKED)
+            .toList() ??
+        [];
+  }
+
+  Future<void> createBooking({
+    required String electricianId,
+    required String homeownerId,
+    required AvailabilitySlot slot,
+    required String description,
+  }) async {
+    try {
+      _isLoading = true;
+      _error = null;
+      notifyListeners();
+
+      // Start a transaction to ensure data consistency
+      await _client.rpc('create_booking', params: {
+        'p_electrician_id': electricianId,
+        'p_homeowner_id': homeownerId,
+        'p_date': slot.date,
+        'p_start_time': slot.startTime,
+        'p_end_time': slot.endTime,
+        'p_description': description,
+      });
+    } catch (e, stackTrace) {
+      LoggerService.error('Error creating booking', e, stackTrace);
+      _error = 'Failed to create booking';
+      throw Exception('Failed to create booking');
     } finally {
       _isLoading = false;
       notifyListeners();
