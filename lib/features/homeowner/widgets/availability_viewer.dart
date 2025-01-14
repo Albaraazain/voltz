@@ -3,9 +3,11 @@ import 'package:provider/provider.dart';
 import 'package:table_calendar/table_calendar.dart';
 import '../../../core/constants/colors.dart';
 import '../../../core/constants/text_styles.dart';
+import '../../../models/availability_slot_model.dart';
 import '../../../providers/availability_provider.dart';
 import '../../../providers/schedule_provider.dart';
 import '../../common/widgets/loading_indicator.dart';
+import '../screens/book_appointment_screen.dart';
 
 class AvailabilityViewer extends StatefulWidget {
   final String electricianId;
@@ -95,6 +97,18 @@ class _AvailabilityViewerState extends State<AvailabilityViewer> {
     );
   }
 
+  void _handleSlotSelection(AvailabilitySlot slot) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => BookAppointmentScreen(
+          electricianId: widget.electricianId,
+          selectedSlot: slot,
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Column(
@@ -180,17 +194,69 @@ class _AvailabilityViewerState extends State<AvailabilityViewer> {
               }
 
               // Combine and sort all slots
-              final allSlots = [
-                ...availableSlots.map((slot) => MapEntry(slot.startTime, true)),
-                ...bookedSlots.map((slot) => MapEntry(slot.startTime, false)),
+              final allSlots = <MapEntry<String, bool>>[
+                for (final slot in availableSlots)
+                  MapEntry(slot.startTime, true),
+                for (final slot in bookedSlots) MapEntry(slot.startTime, false),
               ]..sort((a, b) => a.key.compareTo(b.key));
 
               return ListView.builder(
-                padding: const EdgeInsets.symmetric(horizontal: 16),
                 itemCount: allSlots.length,
                 itemBuilder: (context, index) {
                   final slot = allSlots[index];
-                  return _buildTimeSlot(slot.key, slot.value);
+                  final isAvailable = slot.value;
+                  final time = slot.key;
+                  final availabilitySlot = isAvailable
+                      ? availableSlots.firstWhere((s) => s.startTime == time)
+                      : null;
+
+                  return Padding(
+                    padding: const EdgeInsets.only(bottom: 8),
+                    child: Material(
+                      color: isAvailable
+                          ? AppColors.surface
+                          : AppColors.background,
+                      borderRadius: BorderRadius.circular(8),
+                      child: InkWell(
+                        onTap: isAvailable
+                            ? () => _handleSlotSelection(availabilitySlot!)
+                            : null,
+                        borderRadius: BorderRadius.circular(8),
+                        child: Container(
+                          padding: const EdgeInsets.all(16),
+                          decoration: BoxDecoration(
+                            border: Border.all(
+                              color: isAvailable
+                                  ? AppColors.border
+                                  : AppColors.textSecondary.withOpacity(0.3),
+                            ),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Text(
+                                time,
+                                style: AppTextStyles.bodyMedium.copyWith(
+                                  color: isAvailable
+                                      ? AppColors.textPrimary
+                                      : AppColors.textSecondary,
+                                ),
+                              ),
+                              Text(
+                                isAvailable ? 'Available' : 'Booked',
+                                style: AppTextStyles.bodySmall.copyWith(
+                                  color: isAvailable
+                                      ? AppColors.accent
+                                      : AppColors.textSecondary,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                  );
                 },
               );
             },
