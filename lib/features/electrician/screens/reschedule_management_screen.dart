@@ -39,9 +39,10 @@ class _RescheduleManagementScreenState extends State<RescheduleManagementScreen>
     try {
       final electricianId =
           context.read<ElectricianProvider>().getCurrentElectricianId();
-      await context
-          .read<ScheduleProvider>()
-          .loadRescheduleRequests(electricianId);
+      await context.read<ScheduleProvider>().loadRescheduleRequests(
+            userId: electricianId,
+            userType: 'ELECTRICIAN',
+          );
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -60,8 +61,10 @@ class _RescheduleManagementScreenState extends State<RescheduleManagementScreen>
       setState(() => _isLoading = true);
 
       await context.read<ScheduleProvider>().respondToRescheduleRequest(
-            requestId,
-            action == 'accept' ? 'ACCEPTED' : 'DECLINED',
+            requestId: requestId,
+            status: action == 'accept'
+                ? RescheduleRequest.STATUS_ACCEPTED
+                : RescheduleRequest.STATUS_DECLINED,
           );
 
       if (mounted) {
@@ -105,9 +108,10 @@ class _RescheduleManagementScreenState extends State<RescheduleManagementScreen>
           setState(() => _isLoading = true);
 
           await context.read<ScheduleProvider>().proposeNewTime(
-                requestId,
-                date,
-                '${timeOfDay.hour.toString().padLeft(2, '0')}:${timeOfDay.minute.toString().padLeft(2, '0')}',
+                requestId: requestId,
+                newDate: date,
+                newTime:
+                    '${timeOfDay.hour.toString().padLeft(2, '0')}:${timeOfDay.minute.toString().padLeft(2, '0')}',
               );
 
           if (mounted) {
