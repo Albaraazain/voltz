@@ -24,6 +24,10 @@ class _SplashScreenState extends State<SplashScreen> {
     if (!mounted) return;
 
     final authProvider = context.read<AuthProvider>();
+
+    await authProvider.initializationCompleted;
+    if (!mounted) return;
+
     final isAuthenticated = authProvider.isAuthenticated;
 
     if (!mounted) return;
