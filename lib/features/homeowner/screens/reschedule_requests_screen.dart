@@ -2,11 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../../core/constants/colors.dart';
 import '../../../core/constants/text_styles.dart';
-import '../../../models/reschedule_request_model.dart';
 import '../../../providers/schedule_provider.dart';
-import '../../../providers/database_provider.dart';
+import '../../../providers/homeowner_provider.dart';
+import '../../../models/reschedule_request_model.dart';
 import '../../common/widgets/custom_button.dart';
-import '../../common/widgets/loading_indicator.dart';
 
 class RescheduleRequestsScreen extends StatefulWidget {
   const RescheduleRequestsScreen({super.key});
@@ -38,11 +37,12 @@ class _RescheduleRequestsScreenState extends State<RescheduleRequestsScreen>
     setState(() => _isLoading = true);
 
     try {
-      final homeownerId = context.read<DatabaseProvider>().currentHomeowner!.id;
-      final scheduleProvider = context.read<ScheduleProvider>();
-
-      scheduleProvider.setCurrentHomeownerId(homeownerId);
-      await scheduleProvider.loadRescheduleRequests(homeownerId);
+      final homeownerId =
+          context.read<HomeownerProvider>().getCurrentHomeownerId();
+      await context.read<ScheduleProvider>().loadRescheduleRequests(
+            userId: homeownerId,
+            userType: 'HOMEOWNER',
+          );
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -61,8 +61,10 @@ class _RescheduleRequestsScreenState extends State<RescheduleRequestsScreen>
       setState(() => _isLoading = true);
 
       await context.read<ScheduleProvider>().respondToRescheduleRequest(
-            requestId,
-            action == 'accept' ? 'ACCEPTED' : 'DECLINED',
+            requestId: requestId,
+            status: action == 'accept'
+                ? RescheduleRequest.STATUS_ACCEPTED
+                : RescheduleRequest.STATUS_DECLINED,
           );
 
       if (mounted) {
@@ -155,7 +157,7 @@ class _RescheduleRequestsScreenState extends State<RescheduleRequestsScreen>
                 style: AppTextStyles.bodyMedium,
               ),
             ],
-            if (isPending && request.requestedByType == 'ELECTRICIAN') ...[
+            if (isPending) ...[
               const SizedBox(height: 16),
               Row(
                 mainAxisAlignment: MainAxisAlignment.end,
@@ -201,25 +203,25 @@ class _RescheduleRequestsScreenState extends State<RescheduleRequestsScreen>
         ),
         bottom: TabBar(
           controller: _tabController,
-          labelStyle: AppTextStyles.bodyMedium,
+          onTap: (_) => setState(() {}),
           tabs: const [
             Tab(text: 'Pending'),
             Tab(text: 'Accepted'),
             Tab(text: 'Declined'),
           ],
-          onTap: (_) => setState(() {}),
         ),
       ),
       body: _isLoading
-          ? const Center(child: LoadingIndicator())
+          ? const Center(child: CircularProgressIndicator())
           : requests.isEmpty
               ? Center(
                   child: Text(
-                    'No reschedule requests found',
-                    style: AppTextStyles.bodyMedium,
+                    'No ${_tabController.index == 0 ? 'pending' : _tabController.index == 1 ? 'accepted' : 'declined'} requests',
+                    style: AppTextStyles.bodyLarge,
                   ),
                 )
               : ListView.builder(
+                  padding: const EdgeInsets.symmetric(vertical: 16),
                   itemCount: requests.length,
                   itemBuilder: (context, index) =>
                       _buildRequestCard(requests[index]),
