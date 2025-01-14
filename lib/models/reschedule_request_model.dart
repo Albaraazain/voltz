@@ -1,10 +1,13 @@
 import 'package:flutter/material.dart';
 
 class RescheduleRequest {
+  static const String STATUS_PENDING = 'PENDING';
+  static const String STATUS_ACCEPTED = 'ACCEPTED';
+  static const String STATUS_DECLINED = 'DECLINED';
+
   final String id;
   final String jobId;
   final String requestedById;
-  final String requestedByType;
   final String originalDate;
   final String originalTime;
   final String proposedDate;
@@ -14,16 +17,10 @@ class RescheduleRequest {
   final DateTime createdAt;
   final DateTime updatedAt;
 
-  // Status constants
-  static const String STATUS_PENDING = 'PENDING';
-  static const String STATUS_ACCEPTED = 'ACCEPTED';
-  static const String STATUS_DECLINED = 'DECLINED';
-
-  const RescheduleRequest({
+  RescheduleRequest({
     required this.id,
     required this.jobId,
     required this.requestedById,
-    required this.requestedByType,
     required this.originalDate,
     required this.originalTime,
     required this.proposedDate,
@@ -36,18 +33,17 @@ class RescheduleRequest {
 
   factory RescheduleRequest.fromJson(Map<String, dynamic> json) {
     return RescheduleRequest(
-      id: json['id'] as String,
-      jobId: json['job_id'] as String,
-      requestedById: json['requested_by_id'] as String,
-      requestedByType: json['requested_by_type'] as String,
-      originalDate: json['original_date'] as String,
-      originalTime: json['original_time'] as String,
-      proposedDate: json['proposed_date'] as String,
-      proposedTime: json['proposed_time'] as String,
-      status: json['status'] as String,
-      reason: json['reason'] as String?,
-      createdAt: DateTime.parse(json['created_at'] as String),
-      updatedAt: DateTime.parse(json['updated_at'] as String),
+      id: json['id'],
+      jobId: json['job_id'],
+      requestedById: json['requested_by_id'],
+      originalDate: json['original_date'],
+      originalTime: json['original_time'],
+      proposedDate: json['proposed_date'],
+      proposedTime: json['proposed_time'],
+      status: json['status'],
+      reason: json['reason'],
+      createdAt: DateTime.parse(json['created_at']),
+      updatedAt: DateTime.parse(json['updated_at']),
     );
   }
 
@@ -56,7 +52,6 @@ class RescheduleRequest {
       'id': id,
       'job_id': jobId,
       'requested_by_id': requestedById,
-      'requested_by_type': requestedByType,
       'original_date': originalDate,
       'original_time': originalTime,
       'proposed_date': proposedDate,
@@ -72,7 +67,6 @@ class RescheduleRequest {
     String? id,
     String? jobId,
     String? requestedById,
-    String? requestedByType,
     String? originalDate,
     String? originalTime,
     String? proposedDate,
@@ -86,7 +80,6 @@ class RescheduleRequest {
       id: id ?? this.id,
       jobId: jobId ?? this.jobId,
       requestedById: requestedById ?? this.requestedById,
-      requestedByType: requestedByType ?? this.requestedByType,
       originalDate: originalDate ?? this.originalDate,
       originalTime: originalTime ?? this.originalTime,
       proposedDate: proposedDate ?? this.proposedDate,
