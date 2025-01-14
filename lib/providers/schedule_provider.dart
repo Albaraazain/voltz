@@ -1,33 +1,23 @@
-import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import '../core/services/logger_service.dart';
-import '../core/services/notification_service.dart';
-import '../models/working_hours_model.dart';
+import '../models/working_hours_model.dart' as wh;
+import '../models/schedule_slot_model.dart';
 import '../models/reschedule_request_model.dart';
-import '../models/availability_slot_model.dart';
-import 'availability_provider.dart';
 
 class ScheduleProvider extends ChangeNotifier {
-  final SupabaseClient _client;
-  final AvailabilityProvider _availabilityProvider;
-  bool _isLoading = false;
-  Map<String, List<ScheduleSlot>> _scheduleSlots = {};
-  List<RescheduleRequest> _rescheduleRequests = [];
-  String? _error;
+  final SupabaseClient _supabase;
+  String? _currentElectricianId;
   String? _currentHomeownerId;
+  List<RescheduleRequest> _rescheduleRequests = [];
+  List<ScheduleSlot> _scheduleSlots = [];
+  bool _loading = false;
+  String? _error;
 
-  ScheduleProvider(this._client, this._availabilityProvider);
+  ScheduleProvider(this._supabase);
 
-  bool get isLoading => _isLoading;
-  Map<String, List<ScheduleSlot>> get scheduleSlots => _scheduleSlots;
+  bool get loading => _loading;
   String? get error => _error;
-  String? get currentHomeownerId => _currentHomeownerId;
-
-  // Set current homeowner ID
-  void setCurrentHomeownerId(String id) {
-    _currentHomeownerId = id;
-    notifyListeners();
-  }
+  List<ScheduleSlot> get scheduleSlots => _scheduleSlots;
 
   List<RescheduleRequest> get pendingRescheduleRequests => _rescheduleRequests
       .where((request) => request.status == RescheduleRequest.STATUS_PENDING)
@@ -41,114 +31,223 @@ class ScheduleProvider extends ChangeNotifier {
       .where((request) => request.status == RescheduleRequest.STATUS_DECLINED)
       .toList();
 
-  // Load schedule slots for a specific date range
-  Future<void> loadScheduleSlots(
-      String electricianId, DateTime startDate, DateTime endDate) async {
+  Future<void> setCurrentHomeownerId(String homeownerId) async {
+    _currentHomeownerId = homeownerId;
+    notifyListeners();
+  }
+
+  // Working Hours Methods
+  Future<wh.WorkingHours> setWorkingHours({
+    required String electricianId,
+    required int dayOfWeek,
+    required String startTime,
+    required String endTime,
+    required bool isWorkingDay,
+  }) async {
     try {
-      _isLoading = true;
+      _loading = true;
       _error = null;
       notifyListeners();
 
-      final response = await _client
+      final response = await _supabase
+          .from('working_hours')
+          .upsert({
+            'electrician_id': electricianId,
+            'day_of_week': dayOfWeek,
+            'start_time': startTime,
+            'end_time': endTime,
+            'is_working_day': isWorkingDay,
+          })
+          .select()
+          .single();
+
+      final workingHours = wh.WorkingHours.fromJson(response);
+      _loading = false;
+      notifyListeners();
+      return workingHours;
+    } catch (e) {
+      _error = e.toString();
+      _loading = false;
+      notifyListeners();
+      throw e;
+    }
+  }
+
+  // Schedule Slot Methods
+  Future<ScheduleSlot> createScheduleSlot({
+    required String electricianId,
+    required DateTime date,
+    required String startTime,
+    required String endTime,
+    required String status,
+    String? jobId,
+    String? recurringRule,
+  }) async {
+    try {
+      _loading = true;
+      _error = null;
+      notifyListeners();
+
+      final response = await _supabase
+          .from('schedule_slots')
+          .insert({
+            'electrician_id': electricianId,
+            'date': date.toIso8601String().split('T')[0],
+            'start_time': startTime,
+            'end_time': endTime,
+            'status': status,
+            'job_id': jobId,
+            'recurring_rule': recurringRule,
+          })
+          .select()
+          .single();
+
+      final slot = ScheduleSlot.fromJson(response);
+      _loading = false;
+      notifyListeners();
+      return slot;
+    } catch (e) {
+      _error = e.toString();
+      _loading = false;
+      notifyListeners();
+      throw e;
+    }
+  }
+
+  Future<ScheduleSlot> bookSlot({
+    required String slotId,
+    required String homeownerId,
+    required String description,
+  }) async {
+    try {
+      _loading = true;
+      _error = null;
+      notifyListeners();
+
+      // Get the slot details first
+      final slotData = await _supabase
+          .from('schedule_slots')
+          .select()
+          .eq('id', slotId)
+          .single();
+
+      final slot = ScheduleSlot.fromJson(slotData);
+
+      // Delete the existing slot
+      await _supabase.from('schedule_slots').delete().eq('id', slotId);
+
+      // Call the create_booking function with the correct parameters
+      final jobId = await _supabase.rpc('create_booking', params: {
+        'p_electrician_id': slot.electricianId,
+        'p_homeowner_id': homeownerId,
+        'p_date': slot.date.toIso8601String().split('T')[0],
+        'p_start_time': slot.startTime,
+        'p_end_time': slot.endTime,
+        'p_description': description,
+      });
+
+      // Get the updated slot
+      final updatedSlotData = await _supabase
+          .from('schedule_slots')
+          .select()
+          .eq('job_id', jobId)
+          .single();
+
+      final updatedSlot = ScheduleSlot.fromJson(updatedSlotData);
+      _loading = false;
+      notifyListeners();
+      return updatedSlot;
+    } catch (e) {
+      _error = e.toString();
+      _loading = false;
+      notifyListeners();
+      throw e;
+    }
+  }
+
+  Future<List<ScheduleSlot>> getAvailableSlots({
+    required String electricianId,
+    required DateTime date,
+  }) async {
+    try {
+      _loading = true;
+      _error = null;
+      notifyListeners();
+
+      final response = await _supabase
           .from('schedule_slots')
           .select()
           .eq('electrician_id', electricianId)
-          .gte('date', startDate.toIso8601String().split('T')[0])
-          .lte('date', endDate.toIso8601String().split('T')[0])
-          .order('date');
+          .eq('date', date.toIso8601String().split('T')[0])
+          .eq('status', 'AVAILABLE');
 
-      // Group slots by date
-      _scheduleSlots = {};
-      for (final slot in response) {
-        final date = slot['date'] as String;
-        if (!_scheduleSlots.containsKey(date)) {
-          _scheduleSlots[date] = [];
-        }
-        _scheduleSlots[date]!.add(ScheduleSlot.fromJson(slot));
-      }
-    } catch (e, stackTrace) {
-      LoggerService.error('Error loading schedule slots', e, stackTrace);
-      _error = 'Failed to load schedule slots';
-    } finally {
-      _isLoading = false;
+      final slots =
+          response.map((json) => ScheduleSlot.fromJson(json)).toList();
+      _loading = false;
       notifyListeners();
+      return slots;
+    } catch (e) {
+      _error = e.toString();
+      _loading = false;
+      notifyListeners();
+      throw e;
     }
   }
 
-  // Create a new booking slot
-  Future<void> createBookingSlot(ScheduleSlot slot) async {
+  Future<List<ScheduleSlot>> loadScheduleSlots({
+    required String electricianId,
+    required DateTime date,
+  }) async {
     try {
-      _isLoading = true;
+      _loading = true;
       _error = null;
       notifyListeners();
 
-      // Check if the slot conflicts with availability
-      final availabilitySlots =
-          _availabilityProvider.availabilitySlots[slot.date] ?? [];
-      if (!_isTimeSlotAvailable(slot, availabilitySlots)) {
-        throw Exception('Time slot is not available');
-      }
-
-      // Check for existing bookings
-      if (await _hasBookingConflict(slot)) {
-        throw Exception('Time slot conflicts with existing booking');
-      }
-
-      final response = await _client
+      final response = await _supabase
           .from('schedule_slots')
-          .insert(slot.toJson())
           .select()
-          .single();
+          .eq('electrician_id', electricianId)
+          .eq('date', date.toIso8601String().split('T')[0]);
 
-      final newSlot = ScheduleSlot.fromJson(response);
-      if (!_scheduleSlots.containsKey(newSlot.date)) {
-        _scheduleSlots[newSlot.date] = [];
-      }
-      _scheduleSlots[newSlot.date]!.add(newSlot);
-    } catch (e, stackTrace) {
-      LoggerService.error('Error creating booking slot', e, stackTrace);
-      _error = 'Failed to create booking slot';
-      rethrow;
-    } finally {
-      _isLoading = false;
+      _scheduleSlots = response
+          .map<ScheduleSlot>((json) => ScheduleSlot.fromJson(json))
+          .toList();
+      _loading = false;
       notifyListeners();
+      return _scheduleSlots;
+    } catch (e) {
+      _error = e.toString();
+      _loading = false;
+      notifyListeners();
+      throw e;
     }
   }
 
-  // Update a schedule slot
-  Future<void> updateScheduleSlot(
-      String slotId, Map<String, dynamic> updates) async {
+  Future<List<wh.WorkingHours>> loadWorkingHours(String electricianId) async {
     try {
-      _isLoading = true;
+      _loading = true;
       _error = null;
       notifyListeners();
 
-      final response = await _client
-          .from('schedule_slots')
-          .update(updates)
-          .eq('id', slotId)
+      final response = await _supabase
+          .from('working_hours')
           .select()
-          .single();
+          .eq('electrician_id', electricianId);
 
-      final updatedSlot = ScheduleSlot.fromJson(response);
-      final date = updatedSlot.date;
-
-      final index =
-          _scheduleSlots[date]?.indexWhere((slot) => slot.id == slotId) ?? -1;
-      if (index != -1) {
-        _scheduleSlots[date]![index] = updatedSlot;
-      }
-    } catch (e, stackTrace) {
-      LoggerService.error('Error updating schedule slot', e, stackTrace);
-      _error = 'Failed to update schedule slot';
-      rethrow;
-    } finally {
-      _isLoading = false;
+      final workingHours = response
+          .map<wh.WorkingHours>((json) => wh.WorkingHours.fromJson(json))
+          .toList();
+      _loading = false;
       notifyListeners();
+      return workingHours;
+    } catch (e) {
+      _error = e.toString();
+      _loading = false;
+      notifyListeners();
+      throw e;
     }
   }
 
-  // Handle reschedule request
   Future<void> createRescheduleRequest({
     required String jobId,
     required String requestedById,
@@ -157,28 +256,14 @@ class ScheduleProvider extends ChangeNotifier {
     required String originalTime,
     required DateTime proposedDate,
     required String proposedTime,
-    required String reason,
+    String? reason,
   }) async {
     try {
-      _isLoading = true;
+      _loading = true;
       _error = null;
       notifyListeners();
 
-      // Check if the proposed time is available
-      final proposedSlot = ScheduleSlot(
-        id: '', // Will be generated by the database
-        electricianId: '', // Will be set from the job
-        date: proposedDate.toIso8601String().split('T')[0],
-        startTime: proposedTime,
-        endTime: _calculateEndTime(proposedTime),
-        status: ScheduleSlot.STATUS_PENDING,
-      );
-
-      if (await _hasBookingConflict(proposedSlot)) {
-        throw Exception('Proposed time conflicts with existing booking');
-      }
-
-      await _client.from('reschedule_requests').insert({
+      await _supabase.from('reschedule_requests').insert({
         'job_id': jobId,
         'requested_by_id': requestedById,
         'requested_by_type': requestedByType,
@@ -186,337 +271,121 @@ class ScheduleProvider extends ChangeNotifier {
         'original_time': originalTime,
         'proposed_date': proposedDate.toIso8601String().split('T')[0],
         'proposed_time': proposedTime,
-        'status': 'PENDING',
         'reason': reason,
-      });
-    } catch (e, stackTrace) {
-      LoggerService.error('Error creating reschedule request', e, stackTrace);
-      _error = 'Failed to create reschedule request';
-      rethrow;
-    } finally {
-      _isLoading = false;
-      notifyListeners();
-    }
-  }
-
-  // Handle reschedule response
-  Future<void> respondToRescheduleRequest(
-      String requestId, String status) async {
-    try {
-      _isLoading = true;
-      _error = null;
-      notifyListeners();
-
-      final response = await _client
-          .from('reschedule_requests')
-          .update({'status': status})
-          .eq('id', requestId)
-          .select()
-          .single();
-
-      if (status == 'ACCEPTED') {
-        // Update the job's schedule
-        final request = response;
-        await _client.from('jobs').update({
-          'date': request['proposed_date'],
-          'time': request['proposed_time'],
-        }).eq('id', request['job_id']);
-
-        // Update schedule slots
-        await _updateScheduleSlotsForReschedule(
-          request['job_id'],
-          request['original_date'],
-          request['original_time'],
-          request['proposed_date'],
-          request['proposed_time'],
-        );
-      }
-    } catch (e, stackTrace) {
-      LoggerService.error(
-          'Error responding to reschedule request', e, stackTrace);
-      _error = 'Failed to respond to reschedule request';
-      rethrow;
-    } finally {
-      _isLoading = false;
-      notifyListeners();
-    }
-  }
-
-  // Helper method to check if a time slot is available
-  bool _isTimeSlotAvailable(
-      ScheduleSlot slot, List<AvailabilitySlot> availabilitySlots) {
-    for (final availabilitySlot in availabilitySlots) {
-      if (_isTimeWithinSlot(
-        slot.startTime,
-        slot.endTime,
-        availabilitySlot.startTime,
-        availabilitySlot.endTime,
-      )) {
-        return true;
-      }
-    }
-    return false;
-  }
-
-  // Helper method to check for booking conflicts
-  Future<bool> _hasBookingConflict(ScheduleSlot newSlot) async {
-    final existingSlots = await _client
-        .from('schedule_slots')
-        .select()
-        .eq('electrician_id', newSlot.electricianId)
-        .eq('date', newSlot.date)
-        .neq('status', ScheduleSlot.STATUS_CANCELLED);
-
-    for (final slot in existingSlots) {
-      final existing = ScheduleSlot.fromJson(slot);
-      if (_timesOverlap(
-        newSlot.startTime,
-        newSlot.endTime,
-        existing.startTime,
-        existing.endTime,
-      )) {
-        return true;
-      }
-    }
-    return false;
-  }
-
-  // Helper method to check if a time is within a slot
-  bool _isTimeWithinSlot(
-      String start1, String end1, String start2, String end2) {
-    final startTime1 = _parseTime(start1);
-    final endTime1 = _parseTime(end1);
-    final startTime2 = _parseTime(start2);
-    final endTime2 = _parseTime(end2);
-
-    return !startTime1.isBefore(startTime2) && !endTime1.isAfter(endTime2);
-  }
-
-  // Helper method to check if two time ranges overlap
-  bool _timesOverlap(String start1, String end1, String start2, String end2) {
-    final startTime1 = _parseTime(start1);
-    final endTime1 = _parseTime(end1);
-    final startTime2 = _parseTime(start2);
-    final endTime2 = _parseTime(end2);
-
-    return startTime1.isBefore(endTime2) && endTime1.isAfter(startTime2);
-  }
-
-  // Helper method to parse time string
-  DateTime _parseTime(String time) {
-    final parts = time.split(':');
-    return DateTime(2000, 1, 1, int.parse(parts[0]), int.parse(parts[1]));
-  }
-
-  // Helper method to calculate end time (default to 1 hour duration)
-  String _calculateEndTime(String startTime) {
-    final start = _parseTime(startTime);
-    final end = start.add(const Duration(hours: 1));
-    return '${end.hour.toString().padLeft(2, '0')}:${end.minute.toString().padLeft(2, '0')}';
-  }
-
-  // Helper method to update schedule slots for reschedule
-  Future<void> _updateScheduleSlotsForReschedule(
-    String jobId,
-    String originalDate,
-    String originalTime,
-    String proposedDate,
-    String proposedTime,
-  ) async {
-    // Cancel the original slot
-    await _client
-        .from('schedule_slots')
-        .update({'status': ScheduleSlot.STATUS_CANCELLED})
-        .eq('job_id', jobId)
-        .eq('date', originalDate)
-        .eq('start_time', originalTime);
-
-    // Create a new slot
-    await _client.from('schedule_slots').insert({
-      'job_id': jobId,
-      'date': proposedDate,
-      'start_time': proposedTime,
-      'end_time': _calculateEndTime(proposedTime),
-      'status': ScheduleSlot.STATUS_BOOKED,
-    });
-
-    // Reload the affected dates
-    final dates = [originalDate, proposedDate];
-    for (final date in dates) {
-      final slots = await _client
-          .from('schedule_slots')
-          .select()
-          .eq('date', date)
-          .order('start_time');
-
-      _scheduleSlots[date] =
-          slots.map((s) => ScheduleSlot.fromJson(s)).toList();
-    }
-  }
-
-  // Clear all data (useful when logging out)
-  void clear() {
-    _scheduleSlots = {};
-    _error = null;
-    _isLoading = false;
-    notifyListeners();
-  }
-
-  Future<void> loadRescheduleRequests(String electricianId) async {
-    try {
-      _isLoading = true;
-      _error = null;
-      notifyListeners();
-
-      final response = await _client
-          .from('reschedule_requests')
-          .select()
-          .eq('electrician_id', electricianId)
-          .order('created_at', ascending: false);
-
-      _rescheduleRequests =
-          response.map((json) => RescheduleRequest.fromJson(json)).toList();
-    } catch (e, stackTrace) {
-      LoggerService.error('Error loading reschedule requests', e, stackTrace);
-      _error = 'Failed to load reschedule requests';
-    } finally {
-      _isLoading = false;
-      notifyListeners();
-    }
-  }
-
-  Future<void> proposeNewTime(
-      String requestId, DateTime date, String time) async {
-    try {
-      _isLoading = true;
-      _error = null;
-      notifyListeners();
-
-      final response = await _client
-          .from('reschedule_requests')
-          .update({
-            'proposed_date': date.toIso8601String().split('T')[0],
-            'proposed_time': time,
-            'updated_at': DateTime.now().toIso8601String(),
-          })
-          .eq('id', requestId)
-          .select()
-          .single();
-
-      final updatedRequest = RescheduleRequest.fromJson(response);
-      final index = _rescheduleRequests.indexWhere((r) => r.id == requestId);
-      if (index != -1) {
-        _rescheduleRequests[index] = updatedRequest;
-      }
-
-      // Create notification for the homeowner
-      await _client.from('notifications').insert({
-        'homeowner_id': updatedRequest.requestedById,
-        'title': 'New Time Proposed',
-        'message': 'The electrician has proposed a new time for your job',
-        'type': 'RESCHEDULE_PROPOSED',
-        'read': false,
+        'status': 'PENDING',
       });
 
-      // Show local notification
-      await NotificationService.showNotification(
-        title: 'New Time Proposed',
-        body: 'The electrician has proposed a new time for your job',
-        payload: 'reschedule_request_${updatedRequest.id}',
-      );
-    } catch (e, stackTrace) {
-      LoggerService.error('Error proposing new time', e, stackTrace);
-      _error = 'Failed to propose new time';
-      rethrow;
-    } finally {
-      _isLoading = false;
+      _loading = false;
       notifyListeners();
+    } catch (e) {
+      _error = e.toString();
+      _loading = false;
+      notifyListeners();
+      throw e;
     }
   }
 
-  List<ScheduleSlot> getBookedSlots(DateTime date, String electricianId) {
-    final dateStr = date.toIso8601String().split('T')[0];
-    return _scheduleSlots[dateStr]
-            ?.where((slot) =>
-                slot.electricianId == electricianId &&
-                slot.status == ScheduleSlot.STATUS_BOOKED)
-            .toList() ??
-        [];
-  }
-
-  Future<void> createBooking({
-    required String electricianId,
-    required String homeownerId,
-    required AvailabilitySlot slot,
-    required String description,
+  Future<void> respondToRescheduleRequest({
+    required String requestId,
+    required String status,
   }) async {
     try {
-      _isLoading = true;
+      _loading = true;
       _error = null;
       notifyListeners();
 
-      // Start a transaction to ensure data consistency
-      await _client.rpc('create_booking', params: {
-        'p_electrician_id': electricianId,
-        'p_homeowner_id': homeownerId,
-        'p_date': slot.date,
-        'p_start_time': slot.startTime,
-        'p_end_time': slot.endTime,
-        'p_description': description,
-      });
-    } catch (e, stackTrace) {
-      LoggerService.error('Error creating booking', e, stackTrace);
-      _error = 'Failed to create booking';
-      throw Exception('Failed to create booking');
-    } finally {
-      _isLoading = false;
+      await _supabase
+          .from('reschedule_requests')
+          .update({'status': status}).eq('id', requestId);
+
+      await loadRescheduleRequests(
+        userId: _currentElectricianId!,
+        userType: 'ELECTRICIAN',
+      );
+
+      _loading = false;
       notifyListeners();
+    } catch (e) {
+      _error = e.toString();
+      _loading = false;
+      notifyListeners();
+      throw e;
     }
   }
-}
 
-class ScheduleSlot {
-  static const String STATUS_AVAILABLE = 'AVAILABLE';
-  static const String STATUS_BOOKED = 'BOOKED';
-  static const String STATUS_BLOCKED = 'BLOCKED';
-  static const String STATUS_CANCELLED = 'CANCELLED';
-  static const String STATUS_PENDING = 'PENDING';
+  Future<void> loadRescheduleRequests({
+    required String userId,
+    required String userType,
+  }) async {
+    try {
+      _loading = true;
+      _error = null;
+      notifyListeners();
 
-  final String id;
-  final String electricianId;
-  final String date;
-  final String startTime;
-  final String endTime;
-  final String status;
+      final response = await _supabase.from('reschedule_requests').select().or(
+          'requested_by_id.eq.$userId,job.${userType.toLowerCase()}_id.eq.$userId');
 
-  ScheduleSlot({
-    required this.id,
-    required this.electricianId,
-    required this.date,
-    required this.startTime,
-    required this.endTime,
-    required this.status,
-  });
-
-  factory ScheduleSlot.fromJson(Map<String, dynamic> json) {
-    return ScheduleSlot(
-      id: json['id'],
-      electricianId: json['electrician_id'],
-      date: json['date'],
-      startTime: json['start_time'],
-      endTime: json['end_time'],
-      status: json['status'],
-    );
+      _rescheduleRequests = response
+          .map<RescheduleRequest>((json) => RescheduleRequest.fromJson(json))
+          .toList();
+      _loading = false;
+      notifyListeners();
+    } catch (e) {
+      _error = e.toString();
+      _loading = false;
+      notifyListeners();
+      throw e;
+    }
   }
 
-  Map<String, dynamic> toJson() {
-    return {
-      'id': id,
-      'electrician_id': electricianId,
-      'date': date,
-      'start_time': startTime,
-      'end_time': endTime,
-      'status': status,
-    };
+  Future<void> proposeNewTime({
+    required String requestId,
+    required DateTime newDate,
+    required String newTime,
+  }) async {
+    try {
+      _loading = true;
+      _error = null;
+      notifyListeners();
+
+      await _supabase.from('reschedule_requests').update({
+        'proposed_date': newDate.toIso8601String().split('T')[0],
+        'proposed_time': newTime,
+      }).eq('id', requestId);
+
+      await loadRescheduleRequests(
+        userId: _currentElectricianId!,
+        userType: 'ELECTRICIAN',
+      );
+
+      _loading = false;
+      notifyListeners();
+    } catch (e) {
+      _error = e.toString();
+      _loading = false;
+      notifyListeners();
+      throw e;
+    }
+  }
+
+  bool get isLoading => _loading;
+
+  Future<void> deleteScheduleSlot(String slotId) async {
+    try {
+      _loading = true;
+      _error = null;
+      notifyListeners();
+
+      await _supabase.from('schedule_slots').delete().eq('id', slotId);
+      _scheduleSlots.removeWhere((slot) => slot.id == slotId);
+
+      _loading = false;
+      notifyListeners();
+    } catch (e) {
+      _error = e.toString();
+      _loading = false;
+      notifyListeners();
+      throw e;
+    }
   }
 }
