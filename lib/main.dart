@@ -23,6 +23,8 @@ import 'features/electrician/screens/availability_settings_screen.dart';
 import 'features/electrician/screens/payment_settings_screen.dart';
 import 'features/common/screens/review_details_screen.dart';
 import 'features/electrician/screens/job_details_screen.dart';
+import 'features/homeowner/screens/direct_request_screen.dart';
+import 'features/homeowner/screens/my_direct_requests_screen.dart';
 import 'models/review_model.dart';
 import 'models/job_model.dart';
 
@@ -161,14 +163,12 @@ class MyApp extends StatelessWidget {
                 'Creating ScheduleProvider with AvailabilityProvider dependency');
             return ScheduleProvider(
               SupabaseConfig.client,
-              context.read<AvailabilityProvider>(),
             );
           },
           update: (context, availability, previous) {
             LoggerService.info(
                 'Updating ScheduleProvider with new AvailabilityProvider instance');
-            return previous ??
-                ScheduleProvider(SupabaseConfig.client, availability);
+            return previous ?? ScheduleProvider(SupabaseConfig.client);
           },
         ),
       ],
@@ -229,6 +229,19 @@ class MyApp extends StatelessWidget {
                 builder: (_) => JobDetailsScreen(
                   job: settings.arguments as Job,
                 ),
+              );
+            case '/homeowner/direct-request':
+              final args = settings.arguments as Map<String, String>;
+              return MaterialPageRoute(
+                builder: (_) => DirectRequestScreen(
+                  electricianId: args['electricianId']!,
+                  electricianName: args['electricianName']!,
+                  jobId: args['jobId']!,
+                ),
+              );
+            case '/homeowner/my-requests':
+              return MaterialPageRoute(
+                builder: (_) => const MyDirectRequestsScreen(),
               );
             default:
               LoggerService.warning(
