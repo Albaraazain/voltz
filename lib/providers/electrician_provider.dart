@@ -1,11 +1,12 @@
-import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../core/config/supabase_config.dart';
 import '../core/services/logger_service.dart';
+import '../core/utils/api_response.dart';
+import '../core/utils/error_handler.dart';
 import '../models/job_model.dart';
+import '../models/working_hours_model.dart' as wh;
 import '../models/service_model.dart';
-import '../models/working_hours_model.dart';
-import '../models/electrician_model.dart';
 import 'database_provider.dart';
 
 class ElectricianProvider extends ChangeNotifier {
@@ -16,7 +17,7 @@ class ElectricianProvider extends ChangeNotifier {
   String _currentStatus = 'Available';
   List<Job> _activeJobs = [];
   List<Service> _services = [];
-  WorkingHours _workingHours = const WorkingHours();
+  wh.WorkingHours? _workingHours;
   bool _isLoading = false;
 
   ElectricianProvider(this._databaseProvider) {
@@ -27,7 +28,7 @@ class ElectricianProvider extends ChangeNotifier {
   String get currentStatus => _currentStatus;
   List<Job> get activeJobs => _activeJobs;
   List<Service> get services => _services;
-  WorkingHours get workingHours => _workingHours;
+  wh.WorkingHours? get workingHours => _workingHours;
   bool get isLoading => _isLoading;
 
   Future<void> _initialize() async {
@@ -137,24 +138,16 @@ class ElectricianProvider extends ChangeNotifier {
       notifyListeners();
 
       final electricianId = getCurrentElectricianId();
-      LoggerService.info(
-          'Loading working hours for electrician: $electricianId');
-
       final response = await _client
           .from('electricians')
           .select('working_hours')
           .eq('id', electricianId)
           .single();
 
-      LoggerService.debug(
-          'Working hours response: ${response['working_hours']}');
-
       if (response['working_hours'] != null) {
-        _workingHours = WorkingHours.fromJson(response['working_hours']);
-        LoggerService.info('Working hours loaded successfully');
+        _workingHours = wh.WorkingHours.fromJson(response['working_hours']);
       } else {
-        _workingHours = const WorkingHours();
-        LoggerService.info('No working hours found, using defaults');
+        _workingHours = wh.WorkingHours.defaults();
       }
 
       _isLoading = false;
@@ -273,15 +266,12 @@ class ElectricianProvider extends ChangeNotifier {
     }
   }
 
-  Future<void> updateWorkingHours(WorkingHours hours) async {
+  Future<void> updateWorkingHours(wh.WorkingHours workingHours) async {
     try {
       final electricianId = getCurrentElectricianId();
-      await _client.from('working_hours').upsert({
-        ...hours.toJson(),
-        'electrician_id': electricianId,
-      });
+      await _client.from('electricians').update(
+          {'working_hours': workingHours.toJson()}).eq('id', electricianId);
 
-      _workingHours = hours;
       notifyListeners();
     } catch (e) {
       LoggerService.error('Failed to update working hours', e);
@@ -290,8 +280,17 @@ class ElectricianProvider extends ChangeNotifier {
   }
 
   String getCurrentElectricianId() {
+    if (_databaseProvider.currentProfile == null ||
+        _databaseProvider.currentProfile!.userType.toLowerCase() !=
+            'electrician') {
+      throw Exception('No electrician is currently logged in');
+    }
+
     final electrician = _databaseProvider.electricians.firstWhere(
-        (e) => e.profile.id == _databaseProvider.currentProfile?.id);
+      (e) => e.profile.id == _databaseProvider.currentProfile!.id,
+      orElse: () => throw Exception('Electrician profile not found'),
+    );
+
     return electrician.id;
   }
 }
