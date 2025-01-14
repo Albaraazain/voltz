@@ -2,8 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../../core/constants/colors.dart';
 import '../../../core/constants/text_styles.dart';
-import '../../../providers/database_provider.dart';
-import '../../../models/electrician_model.dart';
+import '../../../providers/schedule_provider.dart';
+import '../../../providers/electrician_provider.dart';
 import '../../../models/working_hours_model.dart';
 import '../../common/widgets/custom_button.dart';
 
@@ -17,8 +17,8 @@ class AvailabilitySettingsScreen extends StatefulWidget {
 
 class _AvailabilitySettingsScreenState
     extends State<AvailabilitySettingsScreen> {
-  late WorkingHours _workingHours;
   bool _isLoading = false;
+  WorkingHours? _workingHours;
 
   @override
   void initState() {
@@ -26,185 +26,212 @@ class _AvailabilitySettingsScreenState
     _loadWorkingHours();
   }
 
-  void _loadWorkingHours() {
-    final electrician =
-        context.read<DatabaseProvider>().electricians.firstWhere(
-              (e) =>
-                  e.profile.id ==
-                  context.read<DatabaseProvider>().currentProfile?.id,
-            );
-    setState(() {
-      _workingHours = electrician.workingHours;
-    });
-  }
-
-  Future<void> _saveWorkingHours() async {
+  Future<void> _loadWorkingHours() async {
     setState(() => _isLoading = true);
 
     try {
-      final dbProvider = context.read<DatabaseProvider>();
-      final currentElectrician = dbProvider.electricians.firstWhere(
-        (e) => e.profile.id == dbProvider.currentProfile?.id,
-      );
-
-      final updatedElectrician = currentElectrician.copyWith(
-        workingHours: _workingHours,
-      );
-
-      await dbProvider.updateElectricianProfile(updatedElectrician);
+      final electricianId =
+          context.read<ElectricianProvider>().getCurrentElectricianId();
+      final workingHours = await context
+          .read<ScheduleProvider>()
+          .loadWorkingHours(electricianId);
+      setState(() => _workingHours = workingHours);
+    } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Availability settings saved')),
+          const SnackBar(content: Text('Failed to load working hours')),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
+    }
+  }
+
+  Future<void> _updateWorkingHours(
+    String day,
+    bool isEnabled,
+    String? startTime,
+    String? endTime,
+  ) async {
+    try {
+      setState(() => _isLoading = true);
+
+      final electricianId =
+          context.read<ElectricianProvider>().getCurrentElectricianId();
+
+      // Create updated schedule based on current state
+      final updatedSchedule = _workingHours?.toJson() ?? {};
+      if (isEnabled && startTime != null && endTime != null) {
+        updatedSchedule[day.toLowerCase()] = {
+          'start': startTime,
+          'end': endTime,
+        };
+      } else {
+        updatedSchedule[day.toLowerCase()] = null;
+      }
+
+      final workingHours = await context
+          .read<ScheduleProvider>()
+          .updateWorkingHours(electricianId, updatedSchedule);
+
+      setState(() => _workingHours = workingHours);
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Working hours updated successfully'),
+            backgroundColor: Colors.green,
+          ),
         );
       }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Failed to save availability settings')),
+          const SnackBar(content: Text('Failed to update working hours')),
         );
       }
     } finally {
-      if (mounted) setState(() => _isLoading = false);
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
     }
   }
 
-  Future<void> _selectTime(String day, bool isStart) async {
-    final currentSchedule = _workingHours.schedule[day];
-    final currentTime = isStart ? currentSchedule?.start : currentSchedule?.end;
-
-    final TimeOfDay initialTime = currentTime != null
-        ? TimeOfDay(
-            hour: int.parse(currentTime.split(':')[0]),
-            minute: int.parse(currentTime.split(':')[1]),
-          )
-        : const TimeOfDay(hour: 9, minute: 0);
-
-    final TimeOfDay? picked = await showTimePicker(
-      context: context,
-      initialTime: initialTime,
-    );
-
-    if (picked != null) {
-      final formattedTime =
-          '${picked.hour.toString().padLeft(2, '0')}:${picked.minute.toString().padLeft(2, '0')}';
-
-      setState(() {
-        final newSchedule =
-            Map<String, DaySchedule?>.from(_workingHours.schedule);
-        final currentDaySchedule = newSchedule[day];
-
-        if (currentDaySchedule == null) {
-          newSchedule[day] = DaySchedule(
-            start: isStart ? formattedTime : '17:00',
-            end: isStart ? '17:00' : formattedTime,
-          );
-        } else {
-          newSchedule[day] = DaySchedule(
-            start: isStart ? formattedTime : currentDaySchedule.start,
-            end: isStart ? currentDaySchedule.end : formattedTime,
-          );
-        }
-
-        _workingHours = WorkingHours(schedule: newSchedule);
-      });
+  DaySchedule? _getDaySchedule(String day) {
+    switch (day.toLowerCase()) {
+      case 'monday':
+        return _workingHours?.monday;
+      case 'tuesday':
+        return _workingHours?.tuesday;
+      case 'wednesday':
+        return _workingHours?.wednesday;
+      case 'thursday':
+        return _workingHours?.thursday;
+      case 'friday':
+        return _workingHours?.friday;
+      case 'saturday':
+        return _workingHours?.saturday;
+      case 'sunday':
+        return _workingHours?.sunday;
+      default:
+        return null;
     }
   }
 
-  Widget _buildDaySchedule(String day, String label) {
-    final schedule = _workingHours.schedule[day];
+  Widget _buildDaySettings(String dayName) {
+    final schedule = _getDaySchedule(dayName);
     final isEnabled = schedule != null;
 
-    return Column(
-      children: [
-        SwitchListTile(
-          value: isEnabled,
-          onChanged: (value) {
-            setState(() {
-              final newSchedule =
-                  Map<String, DaySchedule?>.from(_workingHours.schedule);
-              newSchedule[day] = value
-                  ? const DaySchedule(start: '09:00', end: '17:00')
-                  : null;
-              _workingHours = WorkingHours(schedule: newSchedule);
-            });
-          },
-          title: Text(label, style: AppTextStyles.bodyMedium),
-          activeColor: AppColors.accent,
-        ),
-        if (isEnabled) ...[
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            child: Row(
+    return Card(
+      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Start Time',
-                        style: AppTextStyles.bodySmall.copyWith(
-                          color: AppColors.textSecondary,
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      InkWell(
-                        onTap: () => _selectTime(day, true),
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 16,
-                            vertical: 12,
-                          ),
-                          decoration: BoxDecoration(
-                            border: Border.all(color: AppColors.border),
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          child: Text(
-                            schedule?.start ?? '09:00',
-                            style: AppTextStyles.bodyMedium,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
+                Text(
+                  dayName,
+                  style: AppTextStyles.h3,
                 ),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'End Time',
-                        style: AppTextStyles.bodySmall.copyWith(
-                          color: AppColors.textSecondary,
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      InkWell(
-                        onTap: () => _selectTime(day, false),
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 16,
-                            vertical: 12,
-                          ),
-                          decoration: BoxDecoration(
-                            border: Border.all(color: AppColors.border),
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          child: Text(
-                            schedule?.end ?? '17:00',
-                            style: AppTextStyles.bodyMedium,
-                          ),
-                        ),
-                      ),
-                    ],
+                Switch(
+                  value: isEnabled,
+                  onChanged: (value) => _updateWorkingHours(
+                    dayName,
+                    value,
+                    value ? '09:00' : null,
+                    value ? '17:00' : null,
                   ),
                 ),
               ],
             ),
-          ),
-          const SizedBox(height: 16),
-        ],
-      ],
+            if (isEnabled && schedule != null) ...[
+              const SizedBox(height: 16),
+              Row(
+                children: [
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Start Time',
+                          style: AppTextStyles.bodyMedium
+                              .copyWith(fontWeight: FontWeight.bold),
+                        ),
+                        const SizedBox(height: 8),
+                        CustomButton(
+                          onPressed: () async {
+                            final time = await showTimePicker(
+                              context: context,
+                              initialTime: TimeOfDay(
+                                hour: int.parse(
+                                    schedule.start?.split(':')[0] ?? '9'),
+                                minute: int.parse(
+                                    schedule.start?.split(':')[1] ?? '0'),
+                              ),
+                            );
+                            if (time != null) {
+                              _updateWorkingHours(
+                                dayName,
+                                true,
+                                '${time.hour.toString().padLeft(2, '0')}:${time.minute.toString().padLeft(2, '0')}',
+                                schedule.end,
+                              );
+                            }
+                          },
+                          text: schedule.start ?? '09:00',
+                          type: ButtonType.secondary,
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'End Time',
+                          style: AppTextStyles.bodyMedium
+                              .copyWith(fontWeight: FontWeight.bold),
+                        ),
+                        const SizedBox(height: 8),
+                        CustomButton(
+                          onPressed: () async {
+                            final time = await showTimePicker(
+                              context: context,
+                              initialTime: TimeOfDay(
+                                hour: int.parse(
+                                    schedule.end?.split(':')[0] ?? '17'),
+                                minute: int.parse(
+                                    schedule.end?.split(':')[1] ?? '0'),
+                              ),
+                            );
+                            if (time != null) {
+                              _updateWorkingHours(
+                                dayName,
+                                true,
+                                schedule.start,
+                                '${time.hour.toString().padLeft(2, '0')}:${time.minute.toString().padLeft(2, '0')}',
+                              );
+                            }
+                          },
+                          text: schedule.end ?? '17:00',
+                          type: ButtonType.secondary,
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ],
+        ),
+      ),
     );
   }
 
@@ -218,27 +245,21 @@ class _AvailabilitySettingsScreenState
           'Availability Settings',
           style: AppTextStyles.h2,
         ),
-        elevation: 0,
       ),
-      body: ListView(
-        padding: const EdgeInsets.all(24),
-        children: [
-          Text('Working Days & Hours', style: AppTextStyles.h3),
-          const SizedBox(height: 16),
-          _buildDaySchedule('monday', 'Monday'),
-          _buildDaySchedule('tuesday', 'Tuesday'),
-          _buildDaySchedule('wednesday', 'Wednesday'),
-          _buildDaySchedule('thursday', 'Thursday'),
-          _buildDaySchedule('friday', 'Friday'),
-          _buildDaySchedule('saturday', 'Saturday'),
-          _buildDaySchedule('sunday', 'Sunday'),
-          const SizedBox(height: 32),
-          CustomButton(
-            onPressed: _isLoading ? null : _saveWorkingHours,
-            text: _isLoading ? 'Saving...' : 'Save Changes',
-          ),
-        ],
-      ),
+      body: _isLoading
+          ? const Center(child: CircularProgressIndicator())
+          : ListView(
+              padding: const EdgeInsets.symmetric(vertical: 16),
+              children: [
+                _buildDaySettings('Monday'),
+                _buildDaySettings('Tuesday'),
+                _buildDaySettings('Wednesday'),
+                _buildDaySettings('Thursday'),
+                _buildDaySettings('Friday'),
+                _buildDaySettings('Saturday'),
+                _buildDaySettings('Sunday'),
+              ],
+            ),
     );
   }
 }
