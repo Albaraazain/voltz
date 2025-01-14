@@ -1,347 +1,271 @@
-import 'package:flutter/material.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:flutter/foundation.dart';
+import 'package:supabase/supabase.dart';
 import '../models/direct_request_model.dart';
-import '../core/services/logger_service.dart';
-import '../core/services/notification_service.dart';
-import '../models/notification_model.dart';
 
 class DirectRequestProvider extends ChangeNotifier {
-  final SupabaseClient _client;
-  bool _isLoading = false;
-  List<DirectRequest> _requests = [];
+  final SupabaseClient _supabase;
+  bool _loading = false;
   String? _error;
+  List<DirectRequest> _directRequests = [];
 
-  DirectRequestProvider(this._client);
+  DirectRequestProvider(this._supabase);
 
-  // Getters
-  bool get isLoading => _isLoading;
-  List<DirectRequest> get requests => _requests;
+  List<DirectRequest> get pendingRequests => _directRequests
+      .where((request) => request.status == DirectRequest.STATUS_PENDING)
+      .toList();
+
+  List<DirectRequest> get acceptedRequests => _directRequests
+      .where((request) => request.status == DirectRequest.STATUS_ACCEPTED)
+      .toList();
+
+  List<DirectRequest> get declinedRequests => _directRequests
+      .where((request) => request.status == DirectRequest.STATUS_DECLINED)
+      .toList();
+
+  bool get isLoading => _loading;
   String? get error => _error;
 
-  // Load requests with filters
-  Future<void> loadRequests({
-    String? electricianId,
-    String? homeownerId,
-    String? status,
-    DateTime? startDate,
-    DateTime? endDate,
-    String? searchQuery,
-    bool ascending = false,
-    int? limit,
-    int? offset,
-  }) async {
-    try {
-      _isLoading = true;
-      _error = null;
-      notifyListeners();
-
-      dynamic query = _client.from('direct_requests').select();
-
-      // Apply filters
-      if (electricianId != null) {
-        query = query.eq('electrician_id', electricianId);
-      }
-
-      if (homeownerId != null) {
-        query = query.eq('homeowner_id', homeownerId);
-      }
-
-      if (status != null) {
-        query = query.eq('status', status);
-      }
-
-      if (startDate != null) {
-        query = query.gte(
-            'preferred_date', startDate.toIso8601String().split('T')[0]);
-      }
-
-      if (endDate != null) {
-        query = query.lte(
-            'preferred_date', endDate.toIso8601String().split('T')[0]);
-      }
-
-      if (searchQuery != null && searchQuery.isNotEmpty) {
-        query = query.ilike('message', '%$searchQuery%');
-      }
-
-      // Apply ordering
-      query = query.order('created_at', ascending: ascending);
-
-      // Apply pagination
-      if (limit != null) {
-        query = query.limit(limit);
-      }
-      if (offset != null) {
-        query = query.range(offset, offset + (limit ?? 10) - 1);
-      }
-
-      final response = await query;
-      _requests = response.map((json) => DirectRequest.fromJson(json)).toList();
-    } catch (e, stackTrace) {
-      LoggerService.error('Error loading filtered requests', e, stackTrace);
-      _error = 'Failed to load requests';
-    } finally {
-      _isLoading = false;
-      notifyListeners();
-    }
-  }
-
-  // Filter local requests
-  List<DirectRequest> filterRequests({
-    String? status,
-    DateTime? startDate,
-    DateTime? endDate,
-    String? searchQuery,
-  }) {
-    return _requests.where((request) {
-      bool matches = true;
-
-      if (status != null) {
-        matches = matches && request.status == status;
-      }
-
-      if (startDate != null) {
-        matches = matches && request.preferredDate.isAfter(startDate);
-      }
-
-      if (endDate != null) {
-        matches = matches && request.preferredDate.isBefore(endDate);
-      }
-
-      if (searchQuery != null && searchQuery.isNotEmpty) {
-        matches = matches &&
-            (request.message
-                    ?.toLowerCase()
-                    .contains(searchQuery.toLowerCase()) ??
-                false);
-      }
-
-      return matches;
-    }).toList();
-  }
-
-  // Get requests for today
-  List<DirectRequest> get todayRequests {
-    final now = DateTime.now();
-    final today = DateTime(now.year, now.month, now.day);
-    return filterRequests(startDate: today, endDate: today);
-  }
-
-  // Get requests for this week
-  List<DirectRequest> get thisWeekRequests {
-    final now = DateTime.now();
-    final startOfWeek = now.subtract(Duration(days: now.weekday - 1));
-    final endOfWeek = startOfWeek.add(const Duration(days: 6));
-    return filterRequests(
-      startDate: DateTime(startOfWeek.year, startOfWeek.month, startOfWeek.day),
-      endDate: DateTime(endOfWeek.year, endOfWeek.month, endOfWeek.day),
-    );
-  }
-
-  // Get requests for date range
-  List<DirectRequest> getRequestsForDateRange(DateTime start, DateTime end) {
-    return filterRequests(startDate: start, endDate: end);
-  }
-
-  // Get requests by status
-  List<DirectRequest> getRequestsByStatus(String status) {
-    return filterRequests(status: status);
-  }
-
-  // Search requests
-  List<DirectRequest> searchRequests(String query) {
-    return filterRequests(searchQuery: query);
-  }
-
-  // Load requests for an electrician
-  Future<void> loadElectricianRequests(String electricianId) async {
-    try {
-      _isLoading = true;
-      _error = null;
-      notifyListeners();
-
-      final response = await _client
-          .from('direct_requests')
-          .select()
-          .eq('electrician_id', electricianId)
-          .order('created_at', ascending: false);
-
-      _requests = response.map((json) => DirectRequest.fromJson(json)).toList();
-    } catch (e, stackTrace) {
-      LoggerService.error('Error loading electrician requests', e, stackTrace);
-      _error = 'Failed to load requests';
-    } finally {
-      _isLoading = false;
-      notifyListeners();
-    }
-  }
-
-  // Load requests for a homeowner
   Future<void> loadHomeownerRequests(String homeownerId) async {
     try {
-      _isLoading = true;
+      _loading = true;
       _error = null;
       notifyListeners();
 
-      final response = await _client
+      final response = await _supabase
           .from('direct_requests')
           .select()
-          .eq('homeowner_id', homeownerId)
-          .order('created_at', ascending: false);
+          .eq('homeowner_id', homeownerId);
 
-      _requests = response.map((json) => DirectRequest.fromJson(json)).toList();
-    } catch (e, stackTrace) {
-      LoggerService.error('Error loading homeowner requests', e, stackTrace);
-      _error = 'Failed to load requests';
-    } finally {
-      _isLoading = false;
+      _directRequests = response
+          .map<DirectRequest>((json) => DirectRequest.fromJson(json))
+          .toList();
+
+      _loading = false;
       notifyListeners();
+    } catch (e) {
+      _error = e.toString();
+      _loading = false;
+      notifyListeners();
+      throw e;
     }
   }
 
-  // Create a new direct request
-  Future<DirectRequest> createRequest(DirectRequest request) async {
+  Future<DirectRequest> createDirectRequest({
+    required String homeownerId,
+    required String electricianId,
+    required String description,
+    required DateTime preferredDate,
+    required String preferredTime,
+  }) async {
     try {
-      _isLoading = true;
+      _loading = true;
       _error = null;
       notifyListeners();
 
-      final response = await _client
+      final response = await _supabase
           .from('direct_requests')
-          .insert(request.toJson())
+          .insert({
+            'homeowner_id': homeownerId,
+            'electrician_id': electricianId,
+            'description': description,
+            'preferred_date': preferredDate.toIso8601String().split('T')[0],
+            'preferred_time': preferredTime,
+            'status': DirectRequest.STATUS_PENDING,
+          })
           .select()
           .single();
 
-      final newRequest = DirectRequest.fromJson(response);
-      _requests.insert(0, newRequest);
+      final request = DirectRequest.fromJson(response);
+      _directRequests.add(request);
 
-      // Create notification for electrician
-      await _client.from('notifications').insert({
-        'electrician_id': request.electricianId,
-        'title': 'New Job Request',
-        'message': 'You have received a new direct job request',
-        'type': NotificationType.jobRequest.toString().split('.').last,
-        'read': false,
-      });
-
-      // Show local notification
-      await NotificationService.showNotification(
-        title: 'New Job Request',
-        body: 'You have received a new direct job request',
-        payload: 'job_request_${newRequest.id}',
-      );
-
+      _loading = false;
       notifyListeners();
-      return newRequest;
-    } catch (e, stackTrace) {
-      LoggerService.error('Error creating direct request', e, stackTrace);
-      _error = 'Failed to create request';
-      rethrow;
-    } finally {
-      _isLoading = false;
+
+      return request;
+    } catch (e) {
+      _error = e.toString();
+      _loading = false;
       notifyListeners();
+      throw e;
     }
   }
 
-  // Update request status
-  Future<void> updateRequestStatus(String requestId, String newStatus) async {
+  Future<void> loadDirectRequests({
+    required String electricianId,
+  }) async {
     try {
-      _isLoading = true;
+      _loading = true;
       _error = null;
       notifyListeners();
 
-      final response = await _client
+      final response = await _supabase
           .from('direct_requests')
-          .update({'status': newStatus})
+          .select()
+          .eq('electrician_id', electricianId);
+
+      _directRequests = response
+          .map<DirectRequest>((json) => DirectRequest.fromJson(json))
+          .toList();
+
+      _loading = false;
+      notifyListeners();
+    } catch (e) {
+      _error = e.toString();
+      _loading = false;
+      notifyListeners();
+      throw e;
+    }
+  }
+
+  Future<void> respondToDirectRequest({
+    required String requestId,
+    required String status,
+    String? reason,
+  }) async {
+    try {
+      _loading = true;
+      _error = null;
+      notifyListeners();
+
+      final data = {'status': status};
+      if (reason != null) {
+        data['decline_reason'] = reason;
+      }
+
+      final response = await _supabase
+          .from('direct_requests')
+          .update(data)
           .eq('id', requestId)
           .select()
           .single();
 
-      final updatedRequest = DirectRequest.fromJson(response);
-      final index = _requests.indexWhere((r) => r.id == requestId);
+      if (status == DirectRequest.STATUS_ACCEPTED) {
+        // Create job when request is accepted
+        final request = DirectRequest.fromJson(response);
+        await _supabase.from('jobs').insert({
+          'homeowner_id': request.homeownerId,
+          'electrician_id': request.electricianId,
+          'title': 'Electrical Service',
+          'description': request.description,
+          'status': 'ACCEPTED',
+          'date': DateTime.parse(
+                  '${request.preferredDate}T${request.preferredTime}')
+              .toIso8601String(),
+          'price': 0.00, // Price will be set by electrician
+        });
+      }
+
+      final index = _directRequests.indexWhere((r) => r.id == requestId);
       if (index != -1) {
-        _requests[index] = updatedRequest;
+        _directRequests[index] = DirectRequest.fromJson(response);
       }
 
-      // Create notification based on status
-      String title, message;
-      NotificationType type;
-
-      switch (newStatus) {
-        case DirectRequest.STATUS_ACCEPTED:
-          title = 'Request Accepted';
-          message = 'Your job request has been accepted';
-          type = NotificationType.jobAccepted;
-          break;
-        case DirectRequest.STATUS_DECLINED:
-          title = 'Request Declined';
-          message = 'Your job request has been declined';
-          type = NotificationType.jobDeclined;
-          break;
-        default:
-          return;
-      }
-
-      // Create notification for homeowner
-      await _client.from('notifications').insert({
-        'electrician_id': updatedRequest.electricianId,
-        'title': title,
-        'message': message,
-        'type': type.toString().split('.').last,
-        'read': false,
-      });
-
-      // Show local notification
-      await NotificationService.showNotification(
-        title: title,
-        body: message,
-        payload: 'job_request_${updatedRequest.id}',
-      );
-    } catch (e, stackTrace) {
-      LoggerService.error('Error updating request status', e, stackTrace);
-      _error = 'Failed to update request status';
-      rethrow;
-    } finally {
-      _isLoading = false;
+      _loading = false;
       notifyListeners();
-    }
-  }
-
-  // Get pending requests
-  List<DirectRequest> get pendingRequests {
-    return _requests
-        .where((request) => request.status == DirectRequest.STATUS_PENDING)
-        .toList();
-  }
-
-  // Get accepted requests
-  List<DirectRequest> get acceptedRequests {
-    return _requests
-        .where((request) => request.status == DirectRequest.STATUS_ACCEPTED)
-        .toList();
-  }
-
-  // Get declined requests
-  List<DirectRequest> get declinedRequests {
-    return _requests
-        .where((request) => request.status == DirectRequest.STATUS_DECLINED)
-        .toList();
-  }
-
-  // Get request by ID
-  DirectRequest? getRequestById(String requestId) {
-    try {
-      return _requests.firstWhere((request) => request.id == requestId);
     } catch (e) {
-      return null;
+      _error = e.toString();
+      _loading = false;
+      notifyListeners();
+      throw e;
     }
   }
 
-  // Clear all data (useful when logging out)
-  void clear() {
-    _requests = [];
-    _error = null;
-    _isLoading = false;
-    notifyListeners();
+  Future<void> proposeAlternativeTime({
+    required String requestId,
+    required DateTime alternativeDate,
+    required String alternativeTime,
+    String? message,
+  }) async {
+    try {
+      _loading = true;
+      _error = null;
+      notifyListeners();
+
+      final response = await _supabase
+          .from('direct_requests')
+          .update({
+            'alternative_date': alternativeDate.toIso8601String().split('T')[0],
+            'alternative_time': alternativeTime,
+            'alternative_message': message,
+          })
+          .eq('id', requestId)
+          .select()
+          .single();
+
+      final index = _directRequests.indexWhere((r) => r.id == requestId);
+      if (index != -1) {
+        _directRequests[index] = DirectRequest.fromJson(response);
+      }
+
+      _loading = false;
+      notifyListeners();
+    } catch (e) {
+      _error = e.toString();
+      _loading = false;
+      notifyListeners();
+      throw e;
+    }
+  }
+
+  Future<void> loadElectricianRequests(String electricianId) async {
+    try {
+      _loading = true;
+      _error = null;
+      notifyListeners();
+
+      final response = await _supabase
+          .from('direct_requests')
+          .select()
+          .eq('electrician_id', electricianId);
+
+      _directRequests = response
+          .map<DirectRequest>((json) => DirectRequest.fromJson(json))
+          .toList();
+
+      _loading = false;
+      notifyListeners();
+    } catch (e) {
+      _error = e.toString();
+      _loading = false;
+      notifyListeners();
+      throw e;
+    }
+  }
+
+  Future<void> updateRequestStatus({
+    required String requestId,
+    required String status,
+    String? declineReason,
+  }) async {
+    try {
+      _loading = true;
+      _error = null;
+      notifyListeners();
+
+      final data = {'status': status};
+      if (declineReason != null) {
+        data['decline_reason'] = declineReason;
+      }
+
+      final response = await _supabase
+          .from('direct_requests')
+          .update(data)
+          .eq('id', requestId)
+          .select()
+          .single();
+
+      final index = _directRequests.indexWhere((r) => r.id == requestId);
+      if (index != -1) {
+        _directRequests[index] = DirectRequest.fromJson(response);
+      }
+
+      _loading = false;
+      notifyListeners();
+    } catch (e) {
+      _error = e.toString();
+      _loading = false;
+      notifyListeners();
+      throw e;
+    }
   }
 }
