@@ -1,8 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
 import '../../../core/constants/colors.dart';
 import '../../../core/constants/text_styles.dart';
-import '../../../providers/database_provider.dart';
 import '../../common/widgets/custom_button.dart';
 
 class NotificationSettingsScreen extends StatefulWidget {
