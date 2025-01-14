@@ -47,7 +47,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
       );
 
       await context.read<ElectricianStatsProvider>().loadStats(electrician.id);
-      await context.read<JobProvider>().loadJobs(electrician.id);
+      await context
+          .read<JobProvider>()
+          .loadJobs(electrician.id, isElectrician: true);
     } finally {
       if (mounted) {
         setState(() {
@@ -254,28 +256,47 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       delegate: SliverChildBuilderDelegate(
                         (context, index) {
                           final job = jobProvider.jobs.data![index];
+                          final customerName =
+                              job.homeowner?.profile.name ?? 'Unknown Customer';
                           return Padding(
                             padding: const EdgeInsets.symmetric(
                               horizontal: 24,
                               vertical: 8,
                             ),
                             child: RecentJobCard(
-                              customerName:
-                                  dbProvider.currentProfile?.name ?? 'Unknown',
+                              customerName: customerName,
                               jobType: job.title,
                               amount: '\$${job.price.toStringAsFixed(2)}',
                               date: job.date.toString(),
                               status: job.status,
+                              onTap: () {
+                                // TODO: Navigate to job details
+                                Navigator.pushNamed(
+                                    context, '/electrician/job-details',
+                                    arguments: job);
+                              },
                             ),
                           );
                         },
                         childCount: jobProvider.jobs.data!.length.clamp(0, 5),
                       ),
                     )
+                  else if (jobProvider.jobs.hasError)
+                    const SliverToBoxAdapter(
+                      child: Padding(
+                        padding: EdgeInsets.all(24),
+                        child: Center(
+                          child: Text('Failed to load jobs'),
+                        ),
+                      ),
+                    )
                   else
                     const SliverToBoxAdapter(
-                      child: Center(
-                        child: Text('No recent jobs'),
+                      child: Padding(
+                        padding: EdgeInsets.all(24),
+                        child: Center(
+                          child: Text('No recent jobs'),
+                        ),
                       ),
                     ),
 
