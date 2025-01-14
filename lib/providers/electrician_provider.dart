@@ -44,7 +44,7 @@ class ElectricianProvider extends ChangeNotifier {
       _isLoading = true;
       notifyListeners();
 
-      final electricianId = _getCurrentElectricianId();
+      final electricianId = getCurrentElectricianId();
       final response = await _client
           .from('electricians')
           .select('is_available')
@@ -69,7 +69,7 @@ class ElectricianProvider extends ChangeNotifier {
       _isLoading = true;
       notifyListeners();
 
-      final electricianId = _getCurrentElectricianId();
+      final electricianId = getCurrentElectricianId();
       final response = await _client
           .from('jobs')
           .select('''
@@ -100,7 +100,7 @@ class ElectricianProvider extends ChangeNotifier {
       _isLoading = true;
       notifyListeners();
 
-      final electricianId = _getCurrentElectricianId();
+      final electricianId = getCurrentElectricianId();
       LoggerService.info('Loading services for electrician: $electricianId');
 
       final response = await _client
@@ -136,7 +136,7 @@ class ElectricianProvider extends ChangeNotifier {
       _isLoading = true;
       notifyListeners();
 
-      final electricianId = _getCurrentElectricianId();
+      final electricianId = getCurrentElectricianId();
       LoggerService.info(
           'Loading working hours for electrician: $electricianId');
 
@@ -169,7 +169,7 @@ class ElectricianProvider extends ChangeNotifier {
 
   Future<void> updateAvailability(bool available) async {
     try {
-      final electricianId = _getCurrentElectricianId();
+      final electricianId = getCurrentElectricianId();
       await _client
           .from('electricians')
           .update({'is_available': available}).eq('id', electricianId);
@@ -196,7 +196,7 @@ class ElectricianProvider extends ChangeNotifier {
 
   Future<void> addService(Service service) async {
     try {
-      final electricianId = _getCurrentElectricianId();
+      final electricianId = getCurrentElectricianId();
       LoggerService.info('Adding service for electrician: $electricianId');
       LoggerService.debug('Service details: ${service.toJson()}');
 
@@ -229,7 +229,7 @@ class ElectricianProvider extends ChangeNotifier {
 
   Future<void> updateService(Service service) async {
     try {
-      final electricianId = _getCurrentElectricianId();
+      final electricianId = getCurrentElectricianId();
 
       // Update the service in the list
       final updatedServices = _services.map((s) {
@@ -254,7 +254,7 @@ class ElectricianProvider extends ChangeNotifier {
 
   Future<void> deleteService(String serviceId) async {
     try {
-      final electricianId = _getCurrentElectricianId();
+      final electricianId = getCurrentElectricianId();
 
       // Remove the service from the list
       final updatedServices =
@@ -275,7 +275,7 @@ class ElectricianProvider extends ChangeNotifier {
 
   Future<void> updateWorkingHours(WorkingHours hours) async {
     try {
-      final electricianId = _getCurrentElectricianId();
+      final electricianId = getCurrentElectricianId();
       await _client.from('working_hours').upsert({
         ...hours.toJson(),
         'electrician_id': electricianId,
@@ -289,7 +289,7 @@ class ElectricianProvider extends ChangeNotifier {
     }
   }
 
-  String _getCurrentElectricianId() {
+  String getCurrentElectricianId() {
     final electrician = _databaseProvider.electricians.firstWhere(
         (e) => e.profile.id == _databaseProvider.currentProfile?.id);
     return electrician.id;
