@@ -1,20 +1,19 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:table_calendar/table_calendar.dart';
 import '../../../core/constants/colors.dart';
 import '../../../core/constants/text_styles.dart';
-import '../../../models/availability_slot_model.dart';
-import '../../../providers/availability_provider.dart';
+import '../../../models/schedule_slot_model.dart';
 import '../../../providers/schedule_provider.dart';
-import '../../common/widgets/loading_indicator.dart';
-import '../screens/book_appointment_screen.dart';
+import '../../common/widgets/custom_button.dart';
 
 class AvailabilityViewer extends StatefulWidget {
   final String electricianId;
+  final Function(ScheduleSlot) onSlotSelected;
 
   const AvailabilityViewer({
     super.key,
     required this.electricianId,
+    required this.onSlotSelected,
   });
 
   @override
@@ -22,88 +21,115 @@ class AvailabilityViewer extends StatefulWidget {
 }
 
 class _AvailabilityViewerState extends State<AvailabilityViewer> {
-  DateTime _selectedDay = DateTime.now();
-  DateTime _focusedDay = DateTime.now();
-  CalendarFormat _calendarFormat = CalendarFormat.week;
+  DateTime _selectedDate = DateTime.now();
+  bool _isLoading = false;
 
   @override
   void initState() {
     super.initState();
-    _loadAvailability();
+    _loadSchedule();
   }
 
-  Future<void> _loadAvailability() async {
-    final availabilityProvider = context.read<AvailabilityProvider>();
-    final scheduleProvider = context.read<ScheduleProvider>();
+  Future<void> _loadSchedule() async {
+    setState(() => _isLoading = true);
 
-    // Load availability for the next 30 days
-    final endDate = DateTime.now().add(const Duration(days: 30));
-    await availabilityProvider.loadAvailabilitySlots(
-      widget.electricianId,
-      DateTime.now(),
-      endDate,
-    );
-    await scheduleProvider.loadScheduleSlots(
-      widget.electricianId,
-      DateTime.now(),
-      endDate,
-    );
+    try {
+      await context.read<ScheduleProvider>().loadScheduleSlots(
+            electricianId: widget.electricianId,
+            date: _selectedDate,
+          );
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Failed to load schedule'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
+    }
   }
 
-  Widget _buildTimeSlot(String time, bool isAvailable) {
+  Widget _buildTimeSlot(ScheduleSlot slot) {
+    final isAvailable = slot.status == ScheduleSlot.STATUS_AVAILABLE;
+
     return Container(
-      margin: const EdgeInsets.only(bottom: 8),
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       decoration: BoxDecoration(
-        color: isAvailable ? AppColors.surface : AppColors.background,
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(
-          color: isAvailable ? AppColors.accent : AppColors.border,
-        ),
-      ),
-      child: Row(
-        children: [
-          Icon(
-            Icons.access_time,
-            size: 16,
-            color: isAvailable ? AppColors.accent : AppColors.textSecondary,
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
           ),
-          const SizedBox(width: 8),
-          Text(
-            time,
-            style: AppTextStyles.bodyMedium.copyWith(
-              color:
-                  isAvailable ? AppColors.textPrimary : AppColors.textSecondary,
-            ),
-          ),
-          const Spacer(),
-          if (isAvailable)
-            Text(
-              'Available',
-              style: AppTextStyles.bodySmall.copyWith(
-                color: AppColors.accent,
-                fontWeight: FontWeight.w600,
-              ),
-            )
-          else
-            Text(
-              'Booked',
-              style: AppTextStyles.bodySmall.copyWith(
-                color: AppColors.textSecondary,
-              ),
-            ),
         ],
       ),
-    );
-  }
-
-  void _handleSlotSelection(AvailabilitySlot slot) {
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) => BookAppointmentScreen(
-          electricianId: widget.electricianId,
-          selectedSlot: slot,
+      child: Material(
+        color: Colors.transparent,
+        borderRadius: BorderRadius.circular(16),
+        child: InkWell(
+          onTap: isAvailable ? () => widget.onSlotSelected(slot) : null,
+          borderRadius: BorderRadius.circular(16),
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: (isAvailable ? Colors.green : Colors.red)
+                        .withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Icon(
+                    Icons.access_time,
+                    color: isAvailable ? Colors.green : Colors.red,
+                    size: 24,
+                  ),
+                ),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        '${slot.startTime} - ${slot.endTime}',
+                        style: AppTextStyles.h3,
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        isAvailable ? 'Available' : 'Not Available',
+                        style: AppTextStyles.bodyMedium.copyWith(
+                          color: isAvailable ? Colors.green : Colors.red,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                if (isAvailable)
+                  Container(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                    decoration: BoxDecoration(
+                      color: AppColors.accent.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: Text(
+                      'Select',
+                      style: AppTextStyles.buttonMedium.copyWith(
+                        color: AppColors.accent,
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+          ),
         ),
       ),
     );
@@ -111,156 +137,125 @@ class _AvailabilityViewerState extends State<AvailabilityViewer> {
 
   @override
   Widget build(BuildContext context) {
+    final scheduleProvider = context.watch<ScheduleProvider>();
+    final slots = scheduleProvider.scheduleSlots
+        .where((slot) => slot.status == ScheduleSlot.STATUS_AVAILABLE)
+        .toList();
+
     return Column(
       children: [
-        // Calendar
-        TableCalendar(
-          firstDay: DateTime.now(),
-          lastDay: DateTime.now().add(const Duration(days: 30)),
-          focusedDay: _focusedDay,
-          selectedDayPredicate: (day) => isSameDay(_selectedDay, day),
-          calendarFormat: _calendarFormat,
-          onFormatChanged: (format) {
-            setState(() {
-              _calendarFormat = format;
-            });
-          },
-          onDaySelected: (selectedDay, focusedDay) {
-            setState(() {
-              _selectedDay = selectedDay;
-              _focusedDay = focusedDay;
-            });
-          },
-          calendarStyle: CalendarStyle(
-            selectedDecoration: const BoxDecoration(
-              color: AppColors.accent,
-              shape: BoxShape.circle,
-            ),
-            todayDecoration: BoxDecoration(
-              color: AppColors.accent.withOpacity(0.2),
-              shape: BoxShape.circle,
-            ),
-          ),
-          headerStyle: HeaderStyle(
-            titleTextStyle: AppTextStyles.h3,
-            formatButtonTextStyle: AppTextStyles.bodySmall,
-            formatButtonDecoration: BoxDecoration(
-              border: Border.all(color: AppColors.border),
-              borderRadius: BorderRadius.circular(12),
-            ),
-          ),
-        ),
-
-        const Divider(height: 32),
-
-        // Time Slots
-        Expanded(
-          child: Consumer2<AvailabilityProvider, ScheduleProvider>(
-            builder: (context, availabilityProvider, scheduleProvider, child) {
-              if (availabilityProvider.isLoading ||
-                  scheduleProvider.isLoading) {
-                return const LoadingIndicator();
-              }
-
-              final availableSlots = availabilityProvider.getAvailableSlots(
-                _selectedDay,
-                widget.electricianId,
-              );
-
-              final bookedSlots = scheduleProvider.getBookedSlots(
-                _selectedDay,
-                widget.electricianId,
-              );
-
-              if (availableSlots.isEmpty && bookedSlots.isEmpty) {
-                return Center(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
+        Container(
+          color: AppColors.surface,
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Select Date',
+                style: AppTextStyles.h3.copyWith(color: AppColors.accent),
+              ),
+              const SizedBox(height: 16),
+              GestureDetector(
+                onTap: () async {
+                  final date = await showDatePicker(
+                    context: context,
+                    initialDate: _selectedDate,
+                    firstDate: DateTime.now(),
+                    lastDate: DateTime.now().add(const Duration(days: 90)),
+                  );
+                  if (date != null) {
+                    setState(() => _selectedDate = date);
+                    _loadSchedule();
+                  }
+                },
+                child: Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: AppColors.accent.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Row(
                     children: [
-                      Text(
-                        'No availability',
-                        style: AppTextStyles.bodyLarge,
+                      Icon(
+                        Icons.calendar_today,
+                        color: AppColors.accent,
+                        size: 24,
                       ),
-                      const SizedBox(height: 8),
+                      const SizedBox(width: 16),
                       Text(
-                        'Try selecting a different date',
-                        style: AppTextStyles.bodySmall.copyWith(
-                          color: AppColors.textSecondary,
+                        _selectedDate.toString().split(' ')[0],
+                        style: AppTextStyles.bodyLarge.copyWith(
+                          color: AppColors.accent,
+                          fontWeight: FontWeight.bold,
                         ),
+                      ),
+                      const Spacer(),
+                      Icon(
+                        Icons.arrow_forward_ios,
+                        color: AppColors.accent,
+                        size: 16,
                       ),
                     ],
                   ),
-                );
-              }
-
-              // Combine and sort all slots
-              final allSlots = <MapEntry<String, bool>>[
-                for (final slot in availableSlots)
-                  MapEntry(slot.startTime, true),
-                for (final slot in bookedSlots) MapEntry(slot.startTime, false),
-              ]..sort((a, b) => a.key.compareTo(b.key));
-
-              return ListView.builder(
-                itemCount: allSlots.length,
-                itemBuilder: (context, index) {
-                  final slot = allSlots[index];
-                  final isAvailable = slot.value;
-                  final time = slot.key;
-                  final availabilitySlot = isAvailable
-                      ? availableSlots.firstWhere((s) => s.startTime == time)
-                      : null;
-
-                  return Padding(
-                    padding: const EdgeInsets.only(bottom: 8),
-                    child: Material(
-                      color: isAvailable
-                          ? AppColors.surface
-                          : AppColors.background,
-                      borderRadius: BorderRadius.circular(8),
-                      child: InkWell(
-                        onTap: isAvailable
-                            ? () => _handleSlotSelection(availabilitySlot!)
-                            : null,
-                        borderRadius: BorderRadius.circular(8),
-                        child: Container(
-                          padding: const EdgeInsets.all(16),
-                          decoration: BoxDecoration(
-                            border: Border.all(
-                              color: isAvailable
-                                  ? AppColors.border
-                                  : AppColors.textSecondary.withOpacity(0.3),
-                            ),
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              Text(
-                                time,
-                                style: AppTextStyles.bodyMedium.copyWith(
-                                  color: isAvailable
-                                      ? AppColors.textPrimary
-                                      : AppColors.textSecondary,
-                                ),
-                              ),
-                              Text(
-                                isAvailable ? 'Available' : 'Booked',
-                                style: AppTextStyles.bodySmall.copyWith(
-                                  color: isAvailable
-                                      ? AppColors.accent
-                                      : AppColors.textSecondary,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                    ),
-                  );
-                },
-              );
-            },
+                ),
+              ),
+            ],
           ),
+        ),
+        const SizedBox(height: 8),
+        Expanded(
+          child: _isLoading
+              ? const Center(child: CircularProgressIndicator())
+              : slots.isEmpty
+                  ? Center(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(
+                            Icons.event_busy,
+                            size: 64,
+                            color: AppColors.textSecondary.withOpacity(0.5),
+                          ),
+                          const SizedBox(height: 16),
+                          Text(
+                            'No available slots',
+                            style: AppTextStyles.h3.copyWith(
+                              color: AppColors.textSecondary,
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 32),
+                            child: Column(
+                              children: [
+                                Text(
+                                  'The electrician hasn\'t created any available slots for this date.',
+                                  style: AppTextStyles.bodyMedium.copyWith(
+                                    color: AppColors.textSecondary,
+                                  ),
+                                  textAlign: TextAlign.center,
+                                ),
+                                const SizedBox(height: 8),
+                                Text(
+                                  'Try selecting a different date or check back later.',
+                                  style: AppTextStyles.bodyMedium.copyWith(
+                                    color: AppColors.textSecondary
+                                        .withOpacity(0.7),
+                                  ),
+                                  textAlign: TextAlign.center,
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    )
+                  : ListView.builder(
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      itemCount: slots.length,
+                      itemBuilder: (context, index) =>
+                          _buildTimeSlot(slots[index]),
+                    ),
         ),
       ],
     );
