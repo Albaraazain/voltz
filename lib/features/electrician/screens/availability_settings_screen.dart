@@ -19,6 +19,7 @@ class _AvailabilitySettingsScreenState
     extends State<AvailabilitySettingsScreen> {
   bool _isLoading = false;
   WorkingHours? _workingHours;
+  String? _updatingDay; // Track which day is being updated
 
   @override
   void initState() {
@@ -55,14 +56,16 @@ class _AvailabilitySettingsScreenState
     String? startTime,
     String? endTime,
   ) async {
-    try {
-      setState(() => _isLoading = true);
+    // Set loading state only for this specific day
+    setState(() => _updatingDay = day);
 
+    try {
       final electricianId =
           context.read<ElectricianProvider>().getCurrentElectricianId();
 
-      // Create updated schedule based on current state
-      final updatedSchedule = _workingHours?.toJson() ?? {};
+      final updatedSchedule =
+          Map<String, dynamic>.from(_workingHours?.toJson() ?? {});
+
       if (isEnabled && startTime != null && endTime != null) {
         updatedSchedule[day.toLowerCase()] = {
           'start': startTime,
@@ -76,9 +79,12 @@ class _AvailabilitySettingsScreenState
           .read<ScheduleProvider>()
           .updateWorkingHours(electricianId, updatedSchedule);
 
-      setState(() => _workingHours = workingHours);
-
       if (mounted) {
+        setState(() {
+          _workingHours = workingHours;
+          _updatingDay = null; // Clear the updating state
+        });
+
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text('Working hours updated successfully'),
@@ -88,13 +94,16 @@ class _AvailabilitySettingsScreenState
       }
     } catch (e) {
       if (mounted) {
+        setState(() {
+          _updatingDay = null; // Clear the updating state
+        });
+
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Failed to update working hours')),
+          const SnackBar(
+            content: Text('Failed to update working hours'),
+            backgroundColor: Colors.red,
+          ),
         );
-      }
-    } finally {
-      if (mounted) {
-        setState(() => _isLoading = false);
       }
     }
   }
@@ -123,6 +132,7 @@ class _AvailabilitySettingsScreenState
   Widget _buildDaySettings(String dayName) {
     final schedule = _getDaySchedule(dayName);
     final isEnabled = schedule != null;
+    final isUpdating = _updatingDay == dayName;
 
     return Card(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
@@ -138,18 +148,29 @@ class _AvailabilitySettingsScreenState
                   dayName,
                   style: AppTextStyles.h3,
                 ),
-                Switch(
-                  value: isEnabled,
-                  onChanged: (value) => _updateWorkingHours(
-                    dayName,
-                    value,
-                    value ? '09:00' : null,
-                    value ? '17:00' : null,
+                if (isUpdating)
+                  const SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                    ),
+                  )
+                else
+                  Switch(
+                    value: isEnabled,
+                    onChanged: (value) => _updateWorkingHours(
+                      dayName,
+                      value,
+                      value ? '09:00' : null,
+                      value ? '17:00' : null,
+                    ),
+                    activeColor: AppColors.accent,
+                    inactiveTrackColor: Colors.grey[300],
                   ),
-                ),
               ],
             ),
-            if (isEnabled && schedule != null) ...[
+            if (isEnabled) ...[
               const SizedBox(height: 16),
               Row(
                 children: [
