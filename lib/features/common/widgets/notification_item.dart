@@ -6,6 +6,14 @@ import '../../../models/notification_model.dart';
 import 'package:provider/provider.dart';
 import '../../../providers/notification_provider.dart';
 
+/// A widget that displays a single notification item.
+///
+/// Features:
+/// - Shows notification title, message, and timestamp
+/// - Visual indicator for unread notifications (light accent color background)
+/// - Automatically marks notification as read when tapped
+/// - Uses timeago to display relative time (e.g., "2 hours ago")
+/// - Displays appropriate icon based on notification type
 class NotificationItem extends StatelessWidget {
   final NotificationModel notification;
   final VoidCallback? onTap;
@@ -15,6 +23,28 @@ class NotificationItem extends StatelessWidget {
     required this.notification,
     this.onTap,
   });
+
+  /// Returns the appropriate icon based on the notification type
+  IconData _getNotificationIcon() {
+    switch (notification.type) {
+      case NotificationType.jobRequest:
+        return Icons.work_outline;
+      case NotificationType.jobUpdate:
+      case NotificationType.jobAccepted:
+      case NotificationType.jobDeclined:
+      case NotificationType.jobRejected:
+      case NotificationType.jobCompleted:
+        return Icons.engineering;
+      case NotificationType.payment:
+        return Icons.payment;
+      case NotificationType.review:
+        return Icons.star_outline;
+      case NotificationType.message:
+        return Icons.message_outlined;
+      case NotificationType.system:
+        return Icons.info_outline;
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -42,7 +72,11 @@ class NotificationItem extends StatelessWidget {
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            _buildIcon(),
+            Icon(
+              _getNotificationIcon(),
+              color: AppColors.accent,
+              size: 24,
+            ),
             const SizedBox(width: 16),
             Expanded(
               child: Column(
@@ -73,60 +107,6 @@ class NotificationItem extends StatelessWidget {
             ),
           ],
         ),
-      ),
-    );
-  }
-
-  Widget _buildIcon() {
-    late IconData icon;
-    late Color color;
-
-    switch (notification.type) {
-      case NotificationType.jobRequest:
-        icon = Icons.work_outline;
-        color = AppColors.primary;
-        break;
-      case NotificationType.jobAccepted:
-        icon = Icons.check_circle_outline;
-        color = AppColors.success;
-        break;
-      case NotificationType.jobDeclined:
-      case NotificationType.jobRejected:
-        icon = Icons.cancel_outlined;
-        color = AppColors.error;
-        break;
-      case NotificationType.jobCompleted:
-        icon = Icons.task_alt;
-        color = AppColors.success;
-        break;
-      case NotificationType.message:
-        icon = Icons.chat_bubble_outline;
-        color = AppColors.accent;
-        break;
-      case NotificationType.review:
-        icon = Icons.star_outline;
-        color = AppColors.warning;
-        break;
-      case NotificationType.payment:
-        icon = Icons.payment_outlined;
-        color = AppColors.success;
-        break;
-      case NotificationType.system:
-        icon = Icons.info_outline;
-        color = AppColors.textSecondary;
-        break;
-    }
-
-    return Container(
-      padding: const EdgeInsets.all(8),
-      decoration: BoxDecoration(
-        color: color.withOpacity(0.1),
-        borderRadius: BorderRadius.circular(8),
-      ),
-      child: Icon(
-        icon,
-        color: color,
-        size: 24,
       ),
     );
   }
