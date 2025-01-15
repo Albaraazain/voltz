@@ -269,7 +269,7 @@ BEGIN
   SELECT COUNT(*)::BIGINT
   FROM notifications
   WHERE notifications.profile_id = $1
-  AND notifications.is_read = false;
+  AND notifications.read = false;
 END;
 $$;
 
