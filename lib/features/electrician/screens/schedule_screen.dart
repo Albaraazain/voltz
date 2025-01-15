@@ -21,6 +21,7 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
   DateTime _selectedDate = DateTime.now();
   bool _isLoading = false;
   final ScrollController _scrollController = ScrollController();
+  Map<String, dynamic>? _workingHours;
   final List<String> _weekDays = [
     'Mon',
     'Tue',
@@ -42,6 +43,7 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
   @override
   void initState() {
     super.initState();
+    _loadWorkingHours();
     _loadSchedule();
   }
 
@@ -70,6 +72,43 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
         setState(() => _isLoading = false);
       }
     }
+  }
+
+  Future<void> _loadWorkingHours() async {
+    try {
+      final electricianId =
+          context.read<ElectricianProvider>().getCurrentElectricianId();
+      final workingHours = await context
+          .read<ScheduleProvider>()
+          .loadWorkingHours(electricianId);
+      setState(() {
+        _workingHours = workingHours.toJson();
+      });
+    } catch (e) {
+      LoggerService.error('Failed to load working hours', e);
+    }
+  }
+
+  bool _isDateAvailable(DateTime date) {
+    if (_workingHours == null) return true;
+
+    final dayName = DateFormat('EEEE').format(date).toLowerCase();
+    final daySchedule = _workingHours![dayName];
+    return daySchedule != null &&
+        daySchedule['start'] != null &&
+        daySchedule['end'] != null;
+  }
+
+  String _getTimeRange(String dayName) {
+    if (_workingHours == null) return '';
+
+    final daySchedule = _workingHours![dayName.toLowerCase()];
+    if (daySchedule == null ||
+        daySchedule['start'] == null ||
+        daySchedule['end'] == null) {
+      return 'Unavailable';
+    }
+    return '${daySchedule['start']} - ${daySchedule['end']}';
   }
 
   void _showErrorSnackBar(String message) {
@@ -190,12 +229,12 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
               dayPeriodShape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(12),
               ),
-              dayPeriodColor: MaterialStateColor.resolveWith((states) =>
-                  states.contains(MaterialState.selected)
+              dayPeriodColor: WidgetStateColor.resolveWith((states) =>
+                  states.contains(WidgetState.selected)
                       ? AppColors.primary
                       : AppColors.surface),
-              hourMinuteColor: MaterialStateColor.resolveWith((states) =>
-                  states.contains(MaterialState.selected)
+              hourMinuteColor: WidgetStateColor.resolveWith((states) =>
+                  states.contains(WidgetState.selected)
                       ? AppColors.primary
                       : AppColors.surface),
             ),
@@ -294,45 +333,73 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
         itemBuilder: (context, index) {
           final date = DateTime.now().add(Duration(days: index));
           final isSelected = DateUtils.isSameDay(date, _selectedDate);
+          final isAvailable = _isDateAvailable(date);
+          final dayName = DateFormat('EEEE').format(date);
+          final timeRange = _getTimeRange(dayName);
 
-          return GestureDetector(
-            onTap: () {
-              setState(() => _selectedDate = date);
-              _loadSchedule();
-            },
-            child: Container(
-              width: 60,
-              margin: const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
-              decoration: BoxDecoration(
-                color: isSelected ? AppColors.primary : Colors.transparent,
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Text(
-                    _weekDays[date.weekday - 1],
-                    style: TextStyle(
-                      color:
-                          isSelected ? Colors.white : AppColors.textSecondary,
-                      fontWeight: FontWeight.w500,
+          return Tooltip(
+            message: timeRange,
+            child: GestureDetector(
+              onTap: isAvailable
+                  ? () {
+                      setState(() => _selectedDate = date);
+                      _loadSchedule();
+                    }
+                  : null,
+              child: Container(
+                width: 60,
+                margin: const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
+                decoration: BoxDecoration(
+                  color: isSelected
+                      ? AppColors.primary
+                      : isAvailable
+                          ? Colors.transparent
+                          : Colors.grey.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(12),
+                  border: isAvailable && !isSelected
+                      ? Border.all(
+                          color: AppColors.primary.withOpacity(0.3),
+                          width: 1,
+                        )
+                      : null,
+                ),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Text(
+                      _weekDays[date.weekday - 1],
+                      style: TextStyle(
+                        color: isSelected
+                            ? Colors.white
+                            : isAvailable
+                                ? AppColors.textSecondary
+                                : AppColors.textSecondary.withOpacity(0.5),
+                        fontWeight: FontWeight.w500,
+                      ),
                     ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    date.day.toString(),
-                    style: TextStyle(
-                      color: isSelected ? Colors.white : AppColors.textPrimary,
-                      fontSize: 20,
-                      fontWeight: FontWeight.bold,
+                    const SizedBox(height: 4),
+                    Text(
+                      date.day.toString(),
+                      style: TextStyle(
+                        color: isSelected
+                            ? Colors.white
+                            : isAvailable
+                                ? AppColors.textPrimary
+                                : AppColors.textPrimary.withOpacity(0.5),
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
-                  ),
-                ],
+                    if (!isAvailable)
+                      Icon(
+                        Icons.block,
+                        size: 12,
+                        color: Colors.red.withOpacity(0.5),
+                      ),
+                  ],
+                ),
               ),
-            )
-                .animate(target: isSelected ? 1 : 0)
-                .scale(begin: const Offset(0.95, 0.95), end: const Offset(1, 1))
-                .fadeIn(),
+            ),
           );
         },
       ),
@@ -388,23 +455,49 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
     }
 
     if (slots.isEmpty) {
+      final isDateAvailable = _isDateAvailable(_selectedDate);
+      final dayName = DateFormat('EEEE').format(_selectedDate);
+      final timeRange = _getTimeRange(dayName);
+
       return Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Icon(
-              Icons.event_busy,
+              isDateAvailable ? Icons.event_available : Icons.event_busy,
               size: 64,
-              color: AppColors.textSecondary,
+              color: isDateAvailable
+                  ? AppColors.primary.withOpacity(0.5)
+                  : AppColors.textSecondary,
             ),
             const SizedBox(height: 16),
             Text(
-              'No slots available for this date',
+              isDateAvailable
+                  ? 'No slots created for this date\nWorking hours: $timeRange'
+                  : 'Not available on this day',
+              textAlign: TextAlign.center,
               style: TextStyle(
                 color: AppColors.textSecondary,
                 fontSize: 16,
               ),
             ),
+            if (isDateAvailable) ...[
+              const SizedBox(height: 24),
+              ElevatedButton.icon(
+                onPressed: _createAvailabilitySlot,
+                icon: const Icon(Icons.add),
+                label: const Text('Create Availability'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.primary,
+                  foregroundColor: Colors.white,
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+              ),
+            ],
           ],
         ),
       ).animate().fadeIn().scale();
@@ -413,7 +506,18 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text('Schedule', style: AppTextStyles.h3),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text('Schedule', style: AppTextStyles.h3),
+            Text(
+              DateFormat('EEEE, MMMM d').format(_selectedDate),
+              style: AppTextStyles.bodyMedium.copyWith(
+                color: AppColors.textSecondary,
+              ),
+            ),
+          ],
+        ),
         const SizedBox(height: 12),
         ...slots.map((slot) {
           final startTime = TimeOfDay(
@@ -425,9 +529,29 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
             minute: int.parse(slot.endTime.split(':')[1]),
           );
 
+          final isAvailable = slot.status == ScheduleSlot.STATUS_AVAILABLE;
+          final isBooked = slot.status == ScheduleSlot.STATUS_BOOKED;
+
           return Dismissible(
             key: Key(slot.id),
             direction: DismissDirection.endToStart,
+            confirmDismiss: (direction) async {
+              if (!isAvailable) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: const Text(
+                        'Cannot delete a booked or unavailable slot'),
+                    backgroundColor: Colors.red.shade800,
+                    behavior: SnackBarBehavior.floating,
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12)),
+                    margin: const EdgeInsets.all(16),
+                  ),
+                );
+                return false;
+              }
+              return true;
+            },
             background: Container(
               alignment: Alignment.centerRight,
               padding: const EdgeInsets.only(right: 20),
@@ -450,58 +574,164 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
                 _showErrorSnackBar('Failed to delete slot: ${e.toString()}');
               }
             },
-            child: Container(
-              margin: const EdgeInsets.only(bottom: 8),
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: AppColors.surface,
-                borderRadius: BorderRadius.circular(12),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.05),
-                    blurRadius: 10,
-                    offset: const Offset(0, 2),
+            child: GestureDetector(
+              onTap: isAvailable
+                  ? () async {
+                      LoggerService.info(
+                          'Attempting to navigate to book appointment screen');
+
+                      final electricianId = context
+                          .read<ElectricianProvider>()
+                          .getCurrentElectricianId();
+                      LoggerService.debug('Electrician ID: $electricianId');
+
+                      LoggerService.debug('Slot details before navigation:\n'
+                          'ID: ${slot.id}\n'
+                          'Date: ${slot.date}\n'
+                          'Time: ${slot.startTime} - ${slot.endTime}\n'
+                          'Status: ${slot.status}');
+
+                      final slotJson = slot.toJson();
+                      LoggerService.debug('Slot JSON: $slotJson');
+
+                      try {
+                        final result = await Navigator.pushNamed(
+                          context,
+                          '/book_appointment',
+                          arguments: {
+                            'electricianId': electricianId,
+                            'slot': slot.toJson(),
+                          },
+                        );
+                        LoggerService.debug('Navigation result: $result');
+
+                        if (result == true) {
+                          LoggerService.info(
+                              'Appointment booked successfully, reloading schedule');
+                          _loadSchedule();
+                        }
+                      } catch (e, stackTrace) {
+                        LoggerService.error(
+                          'Failed to navigate to book appointment screen',
+                          e,
+                          stackTrace,
+                        );
+                        _showErrorSnackBar(
+                            'Failed to open booking screen: ${e.toString()}');
+                      }
+                    }
+                  : null,
+              child: Container(
+                margin: const EdgeInsets.only(bottom: 8),
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: AppColors.surface,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(
+                    color: isAvailable
+                        ? Colors.green.withOpacity(0.3)
+                        : isBooked
+                            ? Colors.orange.withOpacity(0.3)
+                            : Colors.red.withOpacity(0.3),
+                    width: 1,
                   ),
-                ],
-              ),
-              child: Row(
-                children: [
-                  Container(
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      color: AppColors.primary.withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(12),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.05),
+                      blurRadius: 10,
+                      offset: const Offset(0, 2),
                     ),
-                    child: Icon(
-                      Icons.access_time,
-                      color: AppColors.primary,
+                  ],
+                ),
+                child: Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: (isAvailable
+                                ? Colors.green
+                                : isBooked
+                                    ? Colors.orange
+                                    : Colors.red)
+                            .withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Icon(
+                        isBooked
+                            ? Icons.event_busy
+                            : isAvailable
+                                ? Icons.event_available
+                                : Icons.block,
+                        color: isAvailable
+                            ? Colors.green
+                            : isBooked
+                                ? Colors.orange
+                                : Colors.red,
+                      ),
                     ),
-                  ),
-                  const SizedBox(width: 16),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          '${startTime.format(context)} - ${endTime.format(context)}',
-                          style: TextStyle(
-                            color: AppColors.textPrimary,
-                            fontSize: 16,
-                            fontWeight: FontWeight.w600,
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            '${startTime.format(context)} - ${endTime.format(context)}',
+                            style: TextStyle(
+                              color: AppColors.textPrimary,
+                              fontSize: 16,
+                              fontWeight: FontWeight.w600,
+                            ),
                           ),
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          slot.status,
-                          style: TextStyle(
-                            color: AppColors.textSecondary,
-                            fontSize: 14,
+                          const SizedBox(height: 4),
+                          Text(
+                            isAvailable
+                                ? 'Available for Booking'
+                                : isBooked
+                                    ? 'Appointment Booked'
+                                    : 'Slot Unavailable',
+                            style: TextStyle(
+                              color: isAvailable
+                                  ? Colors.green
+                                  : isBooked
+                                      ? Colors.orange
+                                      : Colors.red,
+                              fontSize: 14,
+                            ),
                           ),
-                        ),
-                      ],
+                          if (isBooked && slot.job != null) ...[
+                            const SizedBox(height: 8),
+                            Container(
+                              padding: const EdgeInsets.all(8),
+                              decoration: BoxDecoration(
+                                color: Colors.orange.withOpacity(0.1),
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: Row(
+                                children: [
+                                  const Icon(
+                                    Icons.work_outline,
+                                    size: 16,
+                                    color: Colors.orange,
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Expanded(
+                                    child: Text(
+                                      slot.job!.description,
+                                      style: TextStyle(
+                                        color: AppColors.textSecondary,
+                                        fontSize: 12,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ],
+                      ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
           )

@@ -23,9 +23,9 @@ class JobDetailsScreen extends StatelessWidget {
   static const double kIconSize = 22.0;
 
   const JobDetailsScreen({
-    Key? key,
+    super.key,
     required this.job,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {

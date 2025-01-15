@@ -46,7 +46,7 @@ class DirectRequestProvider extends ChangeNotifier {
       _error = e.toString();
       _loading = false;
       notifyListeners();
-      throw e;
+      rethrow;
     }
   }
 
@@ -86,7 +86,7 @@ class DirectRequestProvider extends ChangeNotifier {
       _error = e.toString();
       _loading = false;
       notifyListeners();
-      throw e;
+      rethrow;
     }
   }
 
@@ -113,7 +113,7 @@ class DirectRequestProvider extends ChangeNotifier {
       _error = e.toString();
       _loading = false;
       notifyListeners();
-      throw e;
+      rethrow;
     }
   }
 
@@ -166,7 +166,7 @@ class DirectRequestProvider extends ChangeNotifier {
       _error = e.toString();
       _loading = false;
       notifyListeners();
-      throw e;
+      rethrow;
     }
   }
 
@@ -203,7 +203,7 @@ class DirectRequestProvider extends ChangeNotifier {
       _error = e.toString();
       _loading = false;
       notifyListeners();
-      throw e;
+      rethrow;
     }
   }
 
@@ -228,7 +228,7 @@ class DirectRequestProvider extends ChangeNotifier {
       _error = e.toString();
       _loading = false;
       notifyListeners();
-      throw e;
+      rethrow;
     }
   }
 
@@ -265,7 +265,7 @@ class DirectRequestProvider extends ChangeNotifier {
       _error = e.toString();
       _loading = false;
       notifyListeners();
-      throw e;
+      rethrow;
     }
   }
 }

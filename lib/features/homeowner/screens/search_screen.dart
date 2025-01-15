@@ -172,7 +172,7 @@ class _SearchScreenState extends State<SearchScreen> {
                           name: electrician.profile.name,
                           rating: electrician.rating,
                           specialty: electrician.specialties.isNotEmpty
-                              ? '${electrician.specialties.join(" & ")}'
+                              ? electrician.specialties.join(" & ")
                               : 'General Electrician',
                           price:
                               '\$${electrician.hourlyRate.toStringAsFixed(0)}/hr',

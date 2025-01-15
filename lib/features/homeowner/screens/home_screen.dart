@@ -5,6 +5,7 @@ import '../../../core/constants/text_styles.dart';
 import '../../../providers/database_provider.dart';
 import '../widgets/job_status_card.dart';
 import '../widgets/recent_electrician_card.dart';
+import '../../../providers/notification_provider.dart';
 
 class HomeownerHomeScreen extends StatefulWidget {
   const HomeownerHomeScreen({super.key});
@@ -62,11 +63,22 @@ class _HomeownerHomeScreenState extends State<HomeownerHomeScreen> {
                         ),
                         IconButton(
                           onPressed: () {
-                            // TODO: Show notifications
+                            // Navigate to notifications screen
+                            Navigator.pushNamed(context, '/notifications');
                           },
-                          icon: const Badge(
-                            label: Text('2'),
-                            child: Icon(Icons.notifications_outlined),
+                          icon: Consumer<NotificationProvider>(
+                            builder: (context, provider, child) {
+                              final unreadCount = provider.unreadCount.when(
+                                initial: () => 0,
+                                loading: () => 0,
+                                error: (_) => 0,
+                                success: (count) => count,
+                              );
+                              return Badge(
+                                label: Text(unreadCount.toString()),
+                                child: const Icon(Icons.notifications_outlined),
+                              );
+                            },
                           ),
                         ),
                       ],

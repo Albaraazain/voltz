@@ -58,7 +58,7 @@ class ScheduleProvider extends ChangeNotifier {
       _error = e.toString();
       _loading = false;
       notifyListeners();
-      throw e;
+      rethrow;
     }
   }
 
@@ -85,7 +85,7 @@ class ScheduleProvider extends ChangeNotifier {
       _error = e.toString();
       _loading = false;
       notifyListeners();
-      throw e;
+      rethrow;
     }
   }
 
@@ -160,7 +160,7 @@ class ScheduleProvider extends ChangeNotifier {
       _error = errorMsg;
       _loading = false;
       notifyListeners();
-      throw e;
+      rethrow;
     }
   }
 
@@ -211,7 +211,7 @@ class ScheduleProvider extends ChangeNotifier {
       _error = e.toString();
       _loading = false;
       notifyListeners();
-      throw e;
+      rethrow;
     }
   }
 
@@ -240,7 +240,7 @@ class ScheduleProvider extends ChangeNotifier {
       _error = e.toString();
       _loading = false;
       notifyListeners();
-      throw e;
+      rethrow;
     }
   }
 
@@ -284,7 +284,7 @@ class ScheduleProvider extends ChangeNotifier {
       _error = e.toString();
       _loading = false;
       notifyListeners();
-      throw e;
+      rethrow;
     }
   }
 
@@ -321,7 +321,7 @@ class ScheduleProvider extends ChangeNotifier {
       _error = e.toString();
       _loading = false;
       notifyListeners();
-      throw e;
+      rethrow;
     }
   }
 
@@ -349,7 +349,7 @@ class ScheduleProvider extends ChangeNotifier {
       _error = e.toString();
       _loading = false;
       notifyListeners();
-      throw e;
+      rethrow;
     }
   }
 
@@ -376,7 +376,7 @@ class ScheduleProvider extends ChangeNotifier {
       _error = e.toString();
       _loading = false;
       notifyListeners();
-      throw e;
+      rethrow;
     }
   }
 
@@ -406,7 +406,7 @@ class ScheduleProvider extends ChangeNotifier {
       _error = e.toString();
       _loading = false;
       notifyListeners();
-      throw e;
+      rethrow;
     }
   }
 
@@ -427,7 +427,7 @@ class ScheduleProvider extends ChangeNotifier {
       _error = e.toString();
       _loading = false;
       notifyListeners();
-      throw e;
+      rethrow;
     }
   }
 }

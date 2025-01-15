@@ -2,28 +2,26 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../../core/constants/colors.dart';
 import '../../../core/constants/text_styles.dart';
+import '../../../core/services/logger_service.dart';
 import '../../../models/schedule_slot_model.dart';
-import '../../../providers/schedule_provider.dart';
-import '../../../providers/homeowner_provider.dart';
-import '../../common/widgets/custom_button.dart';
+import '../../../providers/database_provider.dart';
 
 class BookAppointmentScreen extends StatefulWidget {
   final String electricianId;
   final ScheduleSlot selectedSlot;
 
   const BookAppointmentScreen({
-    Key? key,
+    super.key,
     required this.electricianId,
     required this.selectedSlot,
-  }) : super(key: key);
+  });
 
   @override
   State<BookAppointmentScreen> createState() => _BookAppointmentScreenState();
 }
 
 class _BookAppointmentScreenState extends State<BookAppointmentScreen> {
-  final _formKey = GlobalKey<FormState>();
-  final _descriptionController = TextEditingController();
+  final TextEditingController _descriptionController = TextEditingController();
   bool _isLoading = false;
 
   @override
@@ -33,29 +31,44 @@ class _BookAppointmentScreenState extends State<BookAppointmentScreen> {
   }
 
   Future<void> _bookAppointment() async {
-    if (!_formKey.currentState!.validate()) return;
+    if (_descriptionController.text.trim().isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Please provide a description for your appointment'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
 
     setState(() => _isLoading = true);
 
     try {
-      final homeownerId =
-          context.read<HomeownerProvider>().getCurrentHomeownerId();
-      await context.read<ScheduleProvider>().bookSlot(
-            slotId: widget.selectedSlot.id,
-            homeownerId: homeownerId,
-            description: _descriptionController.text,
-          );
+      LoggerService.info('Attempting to book appointment');
+      LoggerService.debug('Booking details:\n'
+          'Electrician ID: ${widget.electricianId}\n'
+          'Slot ID: ${widget.selectedSlot.id}\n'
+          'Description: ${_descriptionController.text}');
+
+      final databaseProvider = context.read<DatabaseProvider>();
+      final homeownerId = databaseProvider.getCurrentHomeownerId();
+
+      await databaseProvider.bookAppointment(
+        electricianId: widget.electricianId,
+        homeownerId: homeownerId,
+        slotId: widget.selectedSlot.id,
+        description: _descriptionController.text.trim(),
+      );
+
+      LoggerService.info('Appointment booked successfully');
 
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Appointment booked successfully'),
-            backgroundColor: Colors.green,
-          ),
-        );
-        Navigator.pop(context);
+        Navigator.pop(context, true);
       }
-    } catch (e) {
+    } catch (e, stackTrace) {
+      LoggerService.error(
+        'Failed to book appointment: ${e.toString()}',
+      );
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -77,137 +90,151 @@ class _BookAppointmentScreenState extends State<BookAppointmentScreen> {
       backgroundColor: AppColors.background,
       appBar: AppBar(
         backgroundColor: AppColors.surface,
-        elevation: 0,
         title: Text(
           'Book Appointment',
           style: AppTextStyles.h2,
         ),
       ),
       body: SingleChildScrollView(
+        padding: const EdgeInsets.all(16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            Text(
+              'Appointment Details',
+              style: AppTextStyles.h3,
+            ),
+            const SizedBox(height: 16),
             Container(
-              width: double.infinity,
-              color: AppColors.surface,
-              padding: const EdgeInsets.all(24),
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: AppColors.surface,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: AppColors.border),
+              ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    'Selected Time Slot',
-                    style: AppTextStyles.h3.copyWith(color: AppColors.accent),
+                  _buildDetailRow(
+                    'Date',
+                    widget.selectedSlot.date.toString().split(' ')[0],
+                    Icons.calendar_today,
                   ),
-                  const SizedBox(height: 16),
-                  Row(
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.all(12),
-                        decoration: BoxDecoration(
-                          color: AppColors.accent.withOpacity(0.1),
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: Icon(
-                          Icons.calendar_today,
-                          color: AppColors.accent,
-                          size: 24,
-                        ),
-                      ),
-                      const SizedBox(width: 16),
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            widget.selectedSlot.date.toString().split(' ')[0],
-                            style: AppTextStyles.bodyLarge.copyWith(
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                          const SizedBox(height: 4),
-                          Text(
-                            '${widget.selectedSlot.startTime} - ${widget.selectedSlot.endTime}',
-                            style: AppTextStyles.bodyMedium.copyWith(
-                              color: AppColors.textSecondary,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ],
+                  const SizedBox(height: 12),
+                  _buildDetailRow(
+                    'Time',
+                    '${widget.selectedSlot.startTime} - ${widget.selectedSlot.endTime}',
+                    Icons.access_time,
                   ),
                 ],
               ),
             ),
-            Padding(
-              padding: const EdgeInsets.all(24),
-              child: Form(
-                key: _formKey,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Job Description',
-                      style: AppTextStyles.h3.copyWith(color: AppColors.accent),
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      'Please provide details about the electrical work needed',
-                      style: AppTextStyles.bodyMedium.copyWith(
-                        color: AppColors.textSecondary,
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-                    Container(
-                      decoration: BoxDecoration(
-                        color: AppColors.surface,
-                        borderRadius: BorderRadius.circular(12),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withOpacity(0.05),
-                            blurRadius: 10,
-                            offset: const Offset(0, 4),
-                          ),
-                        ],
-                      ),
-                      child: TextFormField(
-                        controller: _descriptionController,
-                        maxLines: 5,
-                        decoration: InputDecoration(
-                          hintText:
-                              'e.g., Install new light fixtures in living room...',
-                          hintStyle: AppTextStyles.bodyMedium.copyWith(
-                            color: AppColors.textSecondary.withOpacity(0.5),
-                          ),
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(12),
-                            borderSide: BorderSide.none,
-                          ),
-                          filled: true,
-                          fillColor: AppColors.surface,
-                          contentPadding: const EdgeInsets.all(16),
-                        ),
-                        style: AppTextStyles.bodyMedium,
-                        validator: (value) {
-                          if (value == null || value.isEmpty) {
-                            return 'Please enter a description';
-                          }
-                          return null;
-                        },
-                      ),
-                    ),
-                    const SizedBox(height: 32),
-                    CustomButton(
-                      onPressed: _isLoading ? null : _bookAppointment,
-                      text: 'Confirm Booking',
-                      isLoading: _isLoading,
-                      type: ButtonType.primary,
-                    ),
-                  ],
+            const SizedBox(height: 24),
+            Text(
+              'Service Description',
+              style: AppTextStyles.h3,
+            ),
+            const SizedBox(height: 16),
+            TextField(
+              controller: _descriptionController,
+              maxLines: 4,
+              decoration: InputDecoration(
+                hintText: 'Describe what service you need...',
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: BorderSide(color: AppColors.border),
                 ),
+                enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: BorderSide(color: AppColors.border),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: BorderSide(color: AppColors.primary),
+                ),
+                filled: true,
+                fillColor: AppColors.surface,
               ),
             ),
           ],
         ),
       ),
+      bottomNavigationBar: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: AppColors.surface,
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.05),
+              blurRadius: 10,
+              offset: const Offset(0, -5),
+            ),
+          ],
+        ),
+        child: SafeArea(
+          child: ElevatedButton(
+            onPressed: _isLoading ? null : _bookAppointment,
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.primary,
+              foregroundColor: Colors.white,
+              padding: const EdgeInsets.symmetric(vertical: 16),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+            ),
+            child: _isLoading
+                ? const SizedBox(
+                    height: 20,
+                    width: 20,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                    ),
+                  )
+                : const Text('Confirm Booking'),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildDetailRow(String label, String value, IconData icon) {
+    return Row(
+      children: [
+        Container(
+          padding: const EdgeInsets.all(8),
+          decoration: BoxDecoration(
+            color: AppColors.primary.withOpacity(0.1),
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: Icon(
+            icon,
+            color: AppColors.primary,
+            size: 20,
+          ),
+        ),
+        const SizedBox(width: 12),
+        Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              label,
+              style: TextStyle(
+                color: AppColors.textSecondary,
+                fontSize: 14,
+              ),
+            ),
+            Text(
+              value,
+              style: TextStyle(
+                color: AppColors.textPrimary,
+                fontSize: 16,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ],
+        ),
+      ],
     );
   }
 }

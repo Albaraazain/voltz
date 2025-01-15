@@ -3,6 +3,8 @@ import 'package:timeago/timeago.dart' as timeago;
 import '../../../core/constants/colors.dart';
 import '../../../core/constants/text_styles.dart';
 import '../../../models/notification_model.dart';
+import 'package:provider/provider.dart';
+import '../../../providers/notification_provider.dart';
 
 class NotificationItem extends StatelessWidget {
   final NotificationModel notification;
@@ -19,7 +21,9 @@ class NotificationItem extends StatelessWidget {
     return InkWell(
       onTap: () {
         if (!notification.read) {
-          // Mark as read
+          // Mark as read using the provider
+          Provider.of<NotificationProvider>(context, listen: false)
+              .markAsRead(notification.id);
         }
         onTap?.call();
       },

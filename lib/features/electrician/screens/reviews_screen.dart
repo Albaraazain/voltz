@@ -4,7 +4,6 @@ import '../../../core/constants/colors.dart';
 import '../../../core/constants/text_styles.dart';
 import '../../../providers/database_provider.dart';
 import '../../../providers/review_provider.dart';
-import '../../../models/review_model.dart';
 import '../../common/widgets/review_list_item.dart';
 import '../../common/widgets/loading_indicator.dart';
 

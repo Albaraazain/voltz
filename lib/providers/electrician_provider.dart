@@ -2,8 +2,6 @@ import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../core/config/supabase_config.dart';
 import '../core/services/logger_service.dart';
-import '../core/utils/api_response.dart';
-import '../core/utils/error_handler.dart';
 import '../models/job_model.dart';
 import '../models/working_hours_model.dart' as wh;
 import '../models/service_model.dart';

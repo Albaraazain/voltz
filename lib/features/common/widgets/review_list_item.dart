@@ -34,7 +34,7 @@ class ReviewListItem extends StatelessWidget {
                   radius: 20,
                   backgroundColor: AppColors.primary,
                   child: Text(
-                    review.homeowner?.profile?.name?.characters.first
+                    review.homeowner?.profile.name.characters.first
                             .toUpperCase() ??
                         'U',
                     style: AppTextStyles.bodyLarge.copyWith(
@@ -48,7 +48,7 @@ class ReviewListItem extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        review.homeowner?.profile?.name ?? 'Unknown User',
+                        review.homeowner?.profile.name ?? 'Unknown User',
                         style: AppTextStyles.bodyLarge,
                       ),
                       Text(

@@ -27,6 +27,8 @@ import 'features/homeowner/screens/direct_request_screen.dart';
 import 'features/homeowner/screens/my_direct_requests_screen.dart';
 import 'models/review_model.dart';
 import 'models/job_model.dart';
+import 'features/homeowner/screens/book_appointment_screen.dart';
+import 'models/schedule_slot_model.dart';
 
 Future<void> validateDatabaseSchema() async {
   final client = SupabaseConfig.client;
@@ -243,6 +245,99 @@ class MyApp extends StatelessWidget {
               return MaterialPageRoute(
                 builder: (_) => const MyDirectRequestsScreen(),
               );
+            case '/book_appointment':
+              LoggerService.info('Handling /book_appointment route');
+              try {
+                if (settings.arguments == null) {
+                  throw ArgumentError(
+                      'No arguments provided for book_appointment route');
+                }
+
+                final args = settings.arguments as Map<String, dynamic>;
+                LoggerService.debug('Route arguments: $args');
+
+                if (!args.containsKey('electricianId')) {
+                  throw ArgumentError(
+                      'Missing electricianId in route arguments');
+                }
+                if (!args.containsKey('slot')) {
+                  throw ArgumentError('Missing slot in route arguments');
+                }
+
+                final electricianId = args['electricianId'] as String;
+                LoggerService.debug('Extracted electricianId: $electricianId');
+
+                final slotData = args['slot'];
+                LoggerService.debug('Raw slot data: $slotData');
+
+                if (slotData is! Map<String, dynamic>) {
+                  throw ArgumentError(
+                      'Slot data is not in the correct format. Expected Map<String, dynamic>, got ${slotData.runtimeType}');
+                }
+
+                final slotJson = slotData;
+                LoggerService.debug(
+                    'Converting slot JSON to ScheduleSlot object: $slotJson');
+
+                final slot = ScheduleSlot.fromJson(slotJson);
+                LoggerService.debug(
+                    'Successfully created ScheduleSlot object:\n'
+                    'ID: ${slot.id}\n'
+                    'Date: ${slot.date}\n'
+                    'Time: ${slot.startTime} - ${slot.endTime}\n'
+                    'Status: ${slot.status}');
+
+                return MaterialPageRoute(
+                  builder: (_) => BookAppointmentScreen(
+                    electricianId: electricianId,
+                    selectedSlot: slot,
+                  ),
+                );
+              } catch (e, stackTrace) {
+                LoggerService.error(
+                  'Failed to create book appointment route',
+                  e,
+                  stackTrace,
+                );
+                // Return an error route
+                return MaterialPageRoute(
+                  builder: (_) => Scaffold(
+                    appBar: AppBar(
+                      title: const Text('Error'),
+                      backgroundColor: Colors.red,
+                    ),
+                    body: Center(
+                      child: Padding(
+                        padding: const EdgeInsets.all(16),
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            const Icon(
+                              Icons.error_outline,
+                              color: Colors.red,
+                              size: 64,
+                            ),
+                            const SizedBox(height: 16),
+                            Text(
+                              'Failed to load appointment booking screen',
+                              style: Theme.of(_).textTheme.titleLarge,
+                              textAlign: TextAlign.center,
+                            ),
+                            const SizedBox(height: 8),
+                            Text(
+                              e.toString(),
+                              style: Theme.of(_).textTheme.bodyMedium?.copyWith(
+                                    color: Colors.red,
+                                  ),
+                              textAlign: TextAlign.center,
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                );
+              }
             default:
               LoggerService.warning(
                   'Unknown route requested: ${settings.name}');

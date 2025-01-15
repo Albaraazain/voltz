@@ -109,31 +109,82 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
     BuildContext context,
     NotificationModel notification,
   ) {
+    // Mark notification as read
+    context.read<NotificationProvider>().markAsRead(notification.id);
+
     switch (notification.type) {
       case NotificationType.jobRequest:
         // Navigate to job request details
+        Navigator.pushNamed(
+          context,
+          '/electrician/job-details',
+          arguments: {'jobId': notification.id},
+        );
         break;
       case NotificationType.jobAccepted:
         // Navigate to active job
+        Navigator.pushNamed(
+          context,
+          '/job-details',
+          arguments: {'jobId': notification.id},
+        );
         break;
       case NotificationType.jobDeclined:
       case NotificationType.jobRejected:
         // Navigate to rejected job details
+        Navigator.pushNamed(
+          context,
+          '/job-details',
+          arguments: {'jobId': notification.id},
+        );
         break;
       case NotificationType.jobCompleted:
         // Navigate to completed job
+        Navigator.pushNamed(
+          context,
+          '/job-details',
+          arguments: {'jobId': notification.id},
+        );
         break;
       case NotificationType.message:
         // Navigate to chat
+        Navigator.pushNamed(
+          context,
+          '/chat',
+          arguments: {'chatId': notification.id},
+        );
         break;
       case NotificationType.review:
         // Navigate to reviews
+        Navigator.pushNamed(
+          context,
+          '/reviews',
+          arguments: {'reviewId': notification.id},
+        );
         break;
       case NotificationType.payment:
         // Navigate to payment details
+        Navigator.pushNamed(
+          context,
+          '/payment-details',
+          arguments: {'paymentId': notification.id},
+        );
         break;
       case NotificationType.system:
-        // Handle system notification
+        // Show system notification details in a dialog
+        showDialog(
+          context: context,
+          builder: (context) => AlertDialog(
+            title: Text(notification.title),
+            content: Text(notification.message),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('Close'),
+              ),
+            ],
+          ),
+        );
         break;
     }
   }

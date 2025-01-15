@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../../core/constants/colors.dart';
 import '../../../core/constants/text_styles.dart';
-import '../../../models/direct_request_model.dart';
 import '../../../providers/direct_request_provider.dart';
 import '../../../providers/database_provider.dart';
 import '../../common/widgets/custom_button.dart';

@@ -34,7 +34,7 @@ class AsyncValue<T> {
   }) {
     if (isLoading) return loading();
     if (this.error != null) return error(this.error!);
-    if (this.data != null) return data(this.data!);
+    if (this.data != null) return data(this.data as T);
     throw StateError('Unreachable');
   }
 }

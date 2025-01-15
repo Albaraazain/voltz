@@ -4,7 +4,6 @@ import '../../../core/constants/colors.dart';
 import '../../../core/constants/text_styles.dart';
 import '../../../providers/database_provider.dart';
 import '../widgets/electrician_card.dart';
-import '../../common/widgets/custom_button.dart';
 import '../../common/widgets/loading_indicator.dart';
 
 class ElectricianListScreen extends StatefulWidget {

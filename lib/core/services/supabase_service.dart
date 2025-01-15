@@ -105,9 +105,7 @@ class SupabaseService {
           .eq('auth_id', userId)
           .single();
 
-      if (electrician != null) {
-        return {'type': 'electrician', 'profile': electrician};
-      }
+      return {'type': 'electrician', 'profile': electrician};
 
       // Try homeowner
       final homeowner = await _client
@@ -116,9 +114,7 @@ class SupabaseService {
           .eq('auth_id', userId)
           .single();
 
-      if (homeowner != null) {
-        return {'type': 'homeowner', 'profile': homeowner};
-      }
+      return {'type': 'homeowner', 'profile': homeowner};
 
       return null;
     } catch (e, stackTrace) {

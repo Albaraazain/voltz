@@ -13,6 +13,7 @@ import '../models/working_hours_model.dart';
 import '../models/payment_info_model.dart';
 import '../models/notification_preferences_model.dart';
 import 'auth_provider.dart';
+import '../models/schedule_slot_model.dart' as schedule;
 
 class DatabaseProvider with ChangeNotifier {
   final SupabaseClient _client = SupabaseConfig.client;
@@ -346,8 +347,9 @@ class DatabaseProvider with ChangeNotifier {
   Future<List<Job>> loadJobs({String? status}) async {
     try {
       LoggerService.info('Loading jobs');
-      if (!_authProvider.isAuthenticated)
+      if (!_authProvider.isAuthenticated) {
         throw Exception('User not authenticated');
+      }
 
       var query = _client.from('jobs').select('''
         *,
@@ -460,8 +462,9 @@ class DatabaseProvider with ChangeNotifier {
   Future<String> uploadProfileImage(File file) async {
     try {
       LoggerService.info('Uploading profile image');
-      if (!_authProvider.isAuthenticated)
+      if (!_authProvider.isAuthenticated) {
         throw Exception('User not authenticated');
+      }
 
       final fileName =
           '${_currentProfile!.id}_${DateTime.now().millisecondsSinceEpoch}';
@@ -480,8 +483,9 @@ class DatabaseProvider with ChangeNotifier {
   Future<void> updateElectricianProfile(Electrician electrician) async {
     try {
       LoggerService.info('Updating electrician profile: ${electrician.id}');
-      if (!_authProvider.isAuthenticated)
+      if (!_authProvider.isAuthenticated) {
         throw Exception('User not authenticated');
+      }
 
       // Update profile first
       await _client.from('profiles').update({
@@ -1073,6 +1077,102 @@ class DatabaseProvider with ChangeNotifier {
       notifyListeners();
     } catch (e) {
       rethrow;
+    }
+  }
+
+  String getCurrentHomeownerId() {
+    if (_currentHomeowner == null) {
+      throw Exception('No homeowner is currently logged in');
+    }
+    return _currentHomeowner!.id;
+  }
+
+  Future<void> bookAppointment({
+    required String electricianId,
+    required String homeownerId,
+    required String slotId,
+    required String description,
+  }) async {
+    LoggerService.info('Booking appointment');
+    LoggerService.debug('Booking details:\n'
+        'Electrician ID: $electricianId\n'
+        'Homeowner ID: $homeownerId\n'
+        'Slot ID: $slotId\n'
+        'Description: $description');
+
+    try {
+      // First, update the slot status to booked
+      final slotResponse = await _client
+          .from('schedule_slots')
+          .update({
+            'status': schedule.ScheduleSlot.STATUS_BOOKED,
+          })
+          .eq('id', slotId)
+          .eq('status', schedule.ScheduleSlot.STATUS_AVAILABLE)
+          .select()
+          .single();
+
+      LoggerService.debug('Updated slot: $slotResponse');
+
+      // Get the electrician's hourly rate and services
+      final electricianResponse = await _client
+          .from('electricians')
+          .select('hourly_rate, services')
+          .eq('id', electricianId)
+          .single();
+
+      final hourlyRate = electricianResponse['hourly_rate'] as num;
+      final services = electricianResponse['services'] as List<dynamic>;
+
+      // Use service price if available, otherwise use hourly rate
+      double price = hourlyRate.toDouble();
+      if (services.isNotEmpty) {
+        // Find matching service based on description
+        final matchingService = services.firstWhere(
+          (service) => description
+              .toLowerCase()
+              .contains(service['title'].toString().toLowerCase()),
+          orElse: () => null,
+        );
+        if (matchingService != null) {
+          price = (matchingService['price'] as num).toDouble();
+        }
+      }
+
+      // Ensure minimum price
+      price = price <= 0 ? 20.0 : price;
+
+      // Then, create a job for this appointment
+      final jobResponse = await _client
+          .from('jobs')
+          .insert({
+            'title': 'Service Appointment',
+            'description': description,
+            'status': 'PENDING',
+            'date': DateTime.now().toIso8601String(),
+            'electrician_id': electricianId,
+            'homeowner_id': homeownerId,
+            'created_at': DateTime.now().toIso8601String(),
+            'payment_status': 'payment_pending',
+            'verification_status': 'verification_pending',
+            'price': price,
+          })
+          .select()
+          .single();
+
+      LoggerService.debug('Created job: $jobResponse');
+
+      // Finally, link the job to the slot
+      await _client.from('schedule_slots').update({
+        'job_id': jobResponse['id'],
+      }).eq('id', slotId);
+
+      LoggerService.info('Successfully booked appointment');
+    } catch (e, stackTrace) {
+      LoggerService.error(
+        'Failed to book appointment: ${e.toString()}',
+      );
+      throw Exception('Failed to book appointment: ${e.toString()}');
     }
   }
 }

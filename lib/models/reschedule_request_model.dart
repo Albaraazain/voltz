@@ -1,5 +1,3 @@
-import 'package:flutter/material.dart';
-
 class RescheduleRequest {
   static const String STATUS_PENDING = 'PENDING';
   static const String STATUS_ACCEPTED = 'ACCEPTED';

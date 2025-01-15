@@ -4,7 +4,6 @@ import '../../../core/constants/colors.dart';
 import '../../../core/constants/text_styles.dart';
 import '../../../models/schedule_slot_model.dart';
 import '../../../providers/schedule_provider.dart';
-import '../../common/widgets/custom_button.dart';
 
 class AvailabilityViewer extends StatefulWidget {
   final String electricianId;

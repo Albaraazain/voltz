@@ -37,7 +37,7 @@ class ReviewDetailsScreen extends StatelessWidget {
                   radius: 30,
                   backgroundColor: AppColors.primary,
                   child: Text(
-                    review.homeowner?.profile?.name?.characters.first
+                    review.homeowner?.profile.name.characters.first
                             .toUpperCase() ??
                         'U',
                     style: AppTextStyles.h3.copyWith(
@@ -50,7 +50,7 @@ class ReviewDetailsScreen extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      review.homeowner?.profile?.name ?? 'Unknown User',
+                      review.homeowner?.profile.name ?? 'Unknown User',
                       style: AppTextStyles.h3,
                     ),
                     Text(
@@ -109,7 +109,7 @@ class ReviewDetailsScreen extends StatelessWidget {
                     const Divider(height: 24),
                     _buildJobDetail(
                       'Date',
-                      review.job?.date?.toString() ?? 'N/A',
+                      review.job?.date.toString() ?? 'N/A',
                       Icons.calendar_today_outlined,
                     ),
                     const Divider(height: 24),

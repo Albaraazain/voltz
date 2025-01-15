@@ -1,5 +1,3 @@
-import 'package:flutter/material.dart';
-import 'job_model.dart';
 import 'package:intl/intl.dart';
 
 class DirectRequest {

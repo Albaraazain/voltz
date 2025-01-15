@@ -227,10 +227,6 @@ class JobProvider extends ChangeNotifier {
       final currentJob =
           await _supabase.from('jobs').select().eq('id', jobId).single();
 
-      if (currentJob == null) {
-        throw Exception('Job not found: $jobId');
-      }
-
       // Then perform the update
       final response = await _supabase
           .from('jobs')

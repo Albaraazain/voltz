@@ -3,7 +3,6 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import '../core/config/supabase_config.dart';
 import '../core/services/logger_service.dart';
 import '../models/job_model.dart';
-import '../models/homeowner_model.dart';
 import 'database_provider.dart';
 
 class HomeownerProvider extends ChangeNotifier {
