@@ -6,6 +6,21 @@ import '../../../models/notification_model.dart';
 import '../../../providers/notification_provider.dart';
 import '../widgets/notification_item.dart';
 
+/// Screen that displays a user's notifications.
+///
+/// This screen shows notifications for both homeowners and electricians using a unified system:
+/// - Notifications are fetched based on the user's profile_id
+/// - Each notification can be marked as read individually
+/// - Notifications are sorted by creation date (newest first)
+/// - Different notification types trigger different navigation actions:
+///   * job_request -> Job details screen
+///   * job_update -> Job details screen
+///   * payment -> Payment details screen
+///   * review -> Review details screen
+///   * system -> Shows a dialog with the notification details
+///
+/// The screen also provides a "Mark all as read" action in the app bar.
+/// Notifications use a visual indicator (light accent color) to show unread status.
 class NotificationsScreen extends StatefulWidget {
   const NotificationsScreen({super.key});
 
@@ -118,32 +133,19 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
         Navigator.pushNamed(
           context,
           '/electrician/job-details',
-          arguments: {'jobId': notification.id},
+          arguments: {'jobId': notification.relatedId},
         );
         break;
+      case NotificationType.jobUpdate:
       case NotificationType.jobAccepted:
-        // Navigate to active job
-        Navigator.pushNamed(
-          context,
-          '/job-details',
-          arguments: {'jobId': notification.id},
-        );
-        break;
       case NotificationType.jobDeclined:
       case NotificationType.jobRejected:
-        // Navigate to rejected job details
-        Navigator.pushNamed(
-          context,
-          '/job-details',
-          arguments: {'jobId': notification.id},
-        );
-        break;
       case NotificationType.jobCompleted:
-        // Navigate to completed job
+        // Navigate to job details
         Navigator.pushNamed(
           context,
           '/job-details',
-          arguments: {'jobId': notification.id},
+          arguments: {'jobId': notification.relatedId},
         );
         break;
       case NotificationType.message:
@@ -151,7 +153,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
         Navigator.pushNamed(
           context,
           '/chat',
-          arguments: {'chatId': notification.id},
+          arguments: {'chatId': notification.relatedId},
         );
         break;
       case NotificationType.review:
@@ -159,7 +161,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
         Navigator.pushNamed(
           context,
           '/reviews',
-          arguments: {'reviewId': notification.id},
+          arguments: {'reviewId': notification.relatedId},
         );
         break;
       case NotificationType.payment:
@@ -167,7 +169,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
         Navigator.pushNamed(
           context,
           '/payment-details',
-          arguments: {'paymentId': notification.id},
+          arguments: {'paymentId': notification.relatedId},
         );
         break;
       case NotificationType.system:
