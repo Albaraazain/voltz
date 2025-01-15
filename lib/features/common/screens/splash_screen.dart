@@ -4,6 +4,7 @@ import '../../../core/constants/colors.dart';
 import '../../../core/constants/text_styles.dart';
 import '../../../providers/auth_provider.dart';
 import '../../auth/screens/welcome_screen.dart';
+import '../../../providers/notification_provider.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -33,6 +34,8 @@ class _SplashScreenState extends State<SplashScreen> {
     if (!mounted) return;
 
     if (isAuthenticated) {
+      context.read<NotificationProvider>().startListeningToNotifications();
+
       Navigator.pushReplacementNamed(
         context,
         authProvider.userType == UserType.homeowner
