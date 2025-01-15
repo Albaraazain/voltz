@@ -1,7 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:supabase/supabase.dart';
 import 'package:voltz/providers/schedule_provider.dart';
-import 'package:voltz/models/working_hours_model.dart';
 import 'package:uuid/uuid.dart';
 
 void main() {
