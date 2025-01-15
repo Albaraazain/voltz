@@ -6,6 +6,7 @@ import '../../../providers/schedule_provider.dart';
 import '../../../providers/electrician_provider.dart';
 import '../../../models/working_hours_model.dart';
 import '../../common/widgets/custom_button.dart';
+import '../../../services/logger_service.dart';
 
 class AvailabilitySettingsScreen extends StatefulWidget {
   const AvailabilitySettingsScreen({super.key});
@@ -18,8 +19,8 @@ class AvailabilitySettingsScreen extends StatefulWidget {
 class _AvailabilitySettingsScreenState
     extends State<AvailabilitySettingsScreen> {
   bool _isLoading = false;
-  WorkingHours? _workingHours;
-  String? _updatingDay; // Track which day is being updated
+  List<WorkingHours>? _workingHours;
+  String? _updatingDay;
 
   @override
   void initState() {
@@ -51,56 +52,72 @@ class _AvailabilitySettingsScreenState
   }
 
   Future<void> _updateWorkingHours(
-    String day,
+    int dayOfWeek,
     bool isEnabled,
     String? startTime,
     String? endTime,
   ) async {
+    LoggerService.info('Updating working hours for day $dayOfWeek');
+    LoggerService.info(
+        'Current state - Enabled: $isEnabled, Start: $startTime, End: $endTime');
+
     // Set loading state only for this specific day
-    setState(() => _updatingDay = day);
+    setState(() => _updatingDay = dayOfWeek.toString());
 
     try {
       final electricianId =
           context.read<ElectricianProvider>().getCurrentElectricianId();
+      LoggerService.info('Electrician ID: $electricianId');
 
-      final updatedSchedule =
-          Map<String, dynamic>.from(_workingHours?.toJson() ?? {});
-
-      if (isEnabled && startTime != null && endTime != null) {
-        updatedSchedule[day.toLowerCase()] = {
-          'start': startTime,
-          'end': endTime,
-        };
-      } else {
-        updatedSchedule[day.toLowerCase()] = null;
+      // Initialize working hours if null
+      if (_workingHours == null) {
+        _workingHours = WorkingHours.defaults(electricianId: electricianId);
       }
 
-      final workingHours = await context
+      // Create a copy of the working hours list
+      final updatedHours = List<WorkingHours>.from(_workingHours!);
+
+      // Find and update the specific day
+      final dayIndex =
+          updatedHours.indexWhere((wh) => wh.dayOfWeek == dayOfWeek);
+      if (dayIndex >= 0) {
+        updatedHours[dayIndex] = updatedHours[dayIndex].copyWith(
+          isWorkingDay: isEnabled,
+          startTime: startTime ?? '09:00',
+          endTime: endTime ?? '17:00',
+        );
+      } else {
+        // Add new working hours for this day if it doesn't exist
+        updatedHours.add(WorkingHours(
+          id: '', // Will be set by the database
+          electricianId: electricianId,
+          dayOfWeek: dayOfWeek,
+          startTime: startTime ?? '09:00',
+          endTime: endTime ?? '17:00',
+          isWorkingDay: isEnabled,
+          createdAt: DateTime.now(),
+          updatedAt: DateTime.now(),
+        ));
+      }
+
+      // Update the database
+      final updatedWorkingHours = await context
           .read<ScheduleProvider>()
-          .updateWorkingHours(electricianId, updatedSchedule);
+          .updateWorkingHours(electricianId, updatedHours);
 
       if (mounted) {
         setState(() {
-          _workingHours = workingHours;
-          _updatingDay = null; // Clear the updating state
+          _workingHours = updatedWorkingHours;
+          _updatingDay = null;
         });
-
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Working hours updated successfully'),
-            backgroundColor: Colors.green,
-          ),
-        );
       }
     } catch (e) {
+      LoggerService.error('Failed to update working hours: ${e.toString()}');
       if (mounted) {
-        setState(() {
-          _updatingDay = null; // Clear the updating state
-        });
-
+        setState(() => _updatingDay = null);
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Failed to update working hours'),
+          SnackBar(
+            content: Text('Failed to update working hours: ${e.toString()}'),
             backgroundColor: Colors.red,
           ),
         );
@@ -108,31 +125,33 @@ class _AvailabilitySettingsScreenState
     }
   }
 
-  DaySchedule? _getDaySchedule(String day) {
-    switch (day.toLowerCase()) {
-      case 'monday':
-        return _workingHours?.monday;
-      case 'tuesday':
-        return _workingHours?.tuesday;
-      case 'wednesday':
-        return _workingHours?.wednesday;
-      case 'thursday':
-        return _workingHours?.thursday;
-      case 'friday':
-        return _workingHours?.friday;
-      case 'saturday':
-        return _workingHours?.saturday;
-      case 'sunday':
-        return _workingHours?.sunday;
-      default:
-        return null;
+  WorkingHours? _getDaySchedule(int dayOfWeek) {
+    if (_workingHours == null) {
+      final electricianId =
+          context.read<ElectricianProvider>().getCurrentElectricianId();
+      _workingHours = WorkingHours.defaults(electricianId: electricianId);
     }
+    return _workingHours!.firstWhere(
+      (wh) => wh.dayOfWeek == dayOfWeek,
+      orElse: () => WorkingHours(
+        id: '',
+        electricianId:
+            context.read<ElectricianProvider>().getCurrentElectricianId(),
+        dayOfWeek: dayOfWeek,
+        startTime: '09:00',
+        endTime: '17:00',
+        isWorkingDay: false,
+        createdAt: DateTime.now(),
+        updatedAt: DateTime.now(),
+      ),
+    );
   }
 
-  Widget _buildDaySettings(String dayName) {
-    final schedule = _getDaySchedule(dayName);
-    final isEnabled = schedule != null;
-    final isUpdating = _updatingDay == dayName;
+  Widget _buildDaySettings(int dayOfWeek) {
+    final schedule = _getDaySchedule(dayOfWeek);
+    final isEnabled = schedule?.isWorkingDay ?? false;
+    final isUpdating = _updatingDay == dayOfWeek.toString();
+    final dayName = WorkingHours.getDayName(dayOfWeek);
 
     return Card(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
@@ -159,12 +178,16 @@ class _AvailabilitySettingsScreenState
                 else
                   Switch(
                     value: isEnabled,
-                    onChanged: (value) => _updateWorkingHours(
-                      dayName,
-                      value,
-                      value ? '09:00' : null,
-                      value ? '17:00' : null,
-                    ),
+                    onChanged: (value) {
+                      LoggerService.info(
+                          'Switch toggled to: $value for $dayName');
+                      _updateWorkingHours(
+                        dayOfWeek,
+                        value,
+                        value ? '09:00' : null,
+                        value ? '17:00' : null,
+                      );
+                    },
                     activeColor: AppColors.accent,
                     inactiveTrackColor: Colors.grey[300],
                   ),
@@ -190,21 +213,21 @@ class _AvailabilitySettingsScreenState
                               context: context,
                               initialTime: TimeOfDay(
                                 hour: int.parse(
-                                    schedule.start?.split(':')[0] ?? '9'),
+                                    schedule?.startTime.split(':')[0] ?? '9'),
                                 minute: int.parse(
-                                    schedule.start?.split(':')[1] ?? '0'),
+                                    schedule?.startTime.split(':')[1] ?? '0'),
                               ),
                             );
                             if (time != null) {
                               _updateWorkingHours(
-                                dayName,
+                                dayOfWeek,
                                 true,
                                 '${time.hour.toString().padLeft(2, '0')}:${time.minute.toString().padLeft(2, '0')}',
-                                schedule.end,
+                                schedule?.endTime,
                               );
                             }
                           },
-                          text: schedule.start ?? '09:00',
+                          text: schedule?.startTime ?? '09:00',
                           type: ButtonType.secondary,
                         ),
                       ],
@@ -227,21 +250,21 @@ class _AvailabilitySettingsScreenState
                               context: context,
                               initialTime: TimeOfDay(
                                 hour: int.parse(
-                                    schedule.end?.split(':')[0] ?? '17'),
+                                    schedule?.endTime.split(':')[0] ?? '17'),
                                 minute: int.parse(
-                                    schedule.end?.split(':')[1] ?? '0'),
+                                    schedule?.endTime.split(':')[1] ?? '0'),
                               ),
                             );
                             if (time != null) {
                               _updateWorkingHours(
-                                dayName,
+                                dayOfWeek,
                                 true,
-                                schedule.start,
+                                schedule?.startTime,
                                 '${time.hour.toString().padLeft(2, '0')}:${time.minute.toString().padLeft(2, '0')}',
                               );
                             }
                           },
-                          text: schedule.end ?? '17:00',
+                          text: schedule?.endTime ?? '17:00',
                           type: ButtonType.secondary,
                         ),
                       ],
@@ -259,27 +282,15 @@ class _AvailabilitySettingsScreenState
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.background,
       appBar: AppBar(
-        backgroundColor: AppColors.surface,
-        title: Text(
-          'Availability Settings',
-          style: AppTextStyles.h2,
-        ),
+        title: const Text('Working Hours'),
       ),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
-          : ListView(
+          : ListView.builder(
               padding: const EdgeInsets.symmetric(vertical: 16),
-              children: [
-                _buildDaySettings('Monday'),
-                _buildDaySettings('Tuesday'),
-                _buildDaySettings('Wednesday'),
-                _buildDaySettings('Thursday'),
-                _buildDaySettings('Friday'),
-                _buildDaySettings('Saturday'),
-                _buildDaySettings('Sunday'),
-              ],
+              itemCount: 7,
+              itemBuilder: (context, index) => _buildDaySettings(index),
             ),
     );
   }
