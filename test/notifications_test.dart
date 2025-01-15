@@ -38,11 +38,12 @@ void main() {
           columnNames,
           containsAll([
             'id',
-            'electrician_id',
+            'profile_id',
             'title',
             'message',
             'type',
             'read',
+            'related_id',
             'created_at',
             'updated_at'
           ]));
@@ -53,11 +54,12 @@ void main() {
       );
 
       expect(typeMap['id'], equals('uuid'));
-      expect(typeMap['electrician_id'], equals('uuid'));
+      expect(typeMap['profile_id'], equals('uuid'));
       expect(typeMap['title'], equals('text'));
       expect(typeMap['message'], equals('text'));
       expect(typeMap['type'], equals('text'));
       expect(typeMap['read'], equals('boolean'));
+      expect(typeMap['related_id'], equals('uuid'));
       expect(typeMap['created_at'], equals('timestamp with time zone'));
       expect(typeMap['updated_at'], equals('timestamp with time zone'));
     } catch (e) {
