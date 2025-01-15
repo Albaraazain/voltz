@@ -9,6 +9,9 @@ class ElectricianStatsProvider extends ChangeNotifier {
   AsyncValue<ElectricianStats> _stats = const AsyncValue.loading();
   String _selectedPeriod = 'week';
   bool _isLoading = false;
+  int _retryCount = 0;
+  static const int maxRetries = 3;
+  static const Duration retryDelay = Duration(seconds: 1);
 
   ElectricianStatsProvider(this._client);
 
@@ -17,11 +20,15 @@ class ElectricianStatsProvider extends ChangeNotifier {
   bool get isLoading => _isLoading;
 
   Future<void> loadStats(String electricianId) async {
+    if (_isLoading) return;
+
     try {
+      _isLoading = true;
+      _stats = const AsyncValue.loading();
+      notifyListeners();
+
       LoggerService.debug(
           'Starting loadStats for electricianId: $electricianId');
-      _isLoading = true;
-      notifyListeners();
 
       // Load today's jobs
       LoggerService.debug('Loading today\'s jobs...');
@@ -39,7 +46,8 @@ class ElectricianStatsProvider extends ChangeNotifier {
           .from('jobs')
           .select()
           .eq('electrician_id', electricianId)
-          .eq('status', 'pending');
+          .eq('status', 'PENDING')
+          .gte('date', DateTime.now().toIso8601String().substring(0, 10));
       final newRequests = (newRequestsResponse as List).length;
       LoggerService.debug('New requests count: $newRequests');
 
@@ -88,7 +96,7 @@ class ElectricianStatsProvider extends ChangeNotifier {
       final unreadNotificationsResponse = await _client
           .from('notifications')
           .select()
-          .eq('electrician_id', electricianId)
+          .eq('profile_id', electricianId)
           .eq('read', false);
       final unreadNotifications = (unreadNotificationsResponse as List).length;
       LoggerService.debug('Unread notifications count: $unreadNotifications');
@@ -106,12 +114,24 @@ class ElectricianStatsProvider extends ChangeNotifier {
       );
 
       _isLoading = false;
+      _retryCount = 0;
       LoggerService.debug('Successfully loaded all electrician stats');
       notifyListeners();
     } catch (e, stackTrace) {
+      LoggerService.error('Failed to load electrician stats', e, stackTrace);
+
+      if (_retryCount < maxRetries) {
+        _retryCount++;
+        LoggerService.debug(
+            'Retrying load stats (attempt $_retryCount of $maxRetries)');
+        _isLoading = false;
+        notifyListeners();
+        await Future.delayed(retryDelay);
+        return loadStats(electricianId);
+      }
+
       _isLoading = false;
       _stats = AsyncValue.error(e);
-      LoggerService.error('Failed to load electrician stats', e, stackTrace);
       notifyListeners();
       rethrow;
     }
