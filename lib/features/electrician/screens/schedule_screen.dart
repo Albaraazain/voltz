@@ -5,9 +5,10 @@ import 'package:flutter_animate/flutter_animate.dart';
 import '../../../core/services/logger_service.dart';
 import '../../../core/constants/colors.dart';
 import '../../../core/constants/text_styles.dart';
+import '../../../models/working_hours_model.dart';
 import '../../../models/schedule_slot_model.dart';
-import '../../../providers/schedule_provider.dart';
 import '../../../providers/electrician_provider.dart';
+import '../../../providers/schedule_provider.dart';
 import '../../common/widgets/custom_button.dart';
 
 class ScheduleScreen extends StatefulWidget {
@@ -21,7 +22,7 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
   DateTime _selectedDate = DateTime.now();
   bool _isLoading = false;
   final ScrollController _scrollController = ScrollController();
-  Map<String, dynamic>? _workingHours;
+  List<WorkingHours>? _workingHours;
   final List<String> _weekDays = [
     'Mon',
     'Tue',
@@ -59,13 +60,21 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
     try {
       final electricianId =
           context.read<ElectricianProvider>().getCurrentElectricianId();
+      LoggerService.info('Loading schedule for electrician: $electricianId');
+      LoggerService.info('Selected date: ${_selectedDate.toString()}');
+
       await context.read<ScheduleProvider>().loadScheduleSlots(
             electricianId: electricianId,
             date: _selectedDate,
           );
     } catch (e) {
       if (mounted) {
-        _showErrorSnackBar('Failed to load schedule: ${e.toString()}');
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Failed to load schedule'),
+            backgroundColor: Colors.red,
+          ),
+        );
       }
     } finally {
       if (mounted) {
@@ -78,11 +87,14 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
     try {
       final electricianId =
           context.read<ElectricianProvider>().getCurrentElectricianId();
+      LoggerService.info(
+          'Loading working hours for electrician: $electricianId');
       final workingHours = await context
           .read<ScheduleProvider>()
           .loadWorkingHours(electricianId);
+      LoggerService.info('Loaded working hours: $workingHours');
       setState(() {
-        _workingHours = workingHours.toJson();
+        _workingHours = List<WorkingHours>.from(workingHours);
       });
     } catch (e) {
       LoggerService.error('Failed to load working hours', e);
@@ -90,25 +102,54 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
   }
 
   bool _isDateAvailable(DateTime date) {
-    if (_workingHours == null) return true;
+    if (_workingHours == null) {
+      LoggerService.info('Working hours is null, defaulting to available');
+      return true;
+    }
 
-    final dayName = DateFormat('EEEE').format(date).toLowerCase();
-    final daySchedule = _workingHours![dayName];
-    return daySchedule != null &&
-        daySchedule['start'] != null &&
-        daySchedule['end'] != null;
+    final dayOfWeek = date.weekday % 7; // Convert to 0-6 (Sun-Sat)
+    final daySchedule = _workingHours!.firstWhere(
+      (wh) => wh.dayOfWeek == dayOfWeek,
+      orElse: () => WorkingHours(
+        id: '',
+        electricianId:
+            context.read<ElectricianProvider>().getCurrentElectricianId(),
+        dayOfWeek: dayOfWeek,
+        startTime: '09:00',
+        endTime: '17:00',
+        isWorkingDay: false,
+        createdAt: DateTime.now(),
+        updatedAt: DateTime.now(),
+      ),
+    );
+
+    LoggerService.info(
+        'Checking availability for day $dayOfWeek: $daySchedule');
+    return daySchedule.isWorkingDay;
   }
 
-  String _getTimeRange(String dayName) {
+  String _getTimeRange(int dayOfWeek) {
     if (_workingHours == null) return '';
 
-    final daySchedule = _workingHours![dayName.toLowerCase()];
-    if (daySchedule == null ||
-        daySchedule['start'] == null ||
-        daySchedule['end'] == null) {
+    final daySchedule = _workingHours!.firstWhere(
+      (wh) => wh.dayOfWeek == dayOfWeek,
+      orElse: () => WorkingHours(
+        id: '',
+        electricianId:
+            context.read<ElectricianProvider>().getCurrentElectricianId(),
+        dayOfWeek: dayOfWeek,
+        startTime: '09:00',
+        endTime: '17:00',
+        isWorkingDay: false,
+        createdAt: DateTime.now(),
+        updatedAt: DateTime.now(),
+      ),
+    );
+
+    if (!daySchedule.isWorkingDay) {
       return 'Unavailable';
     }
-    return '${daySchedule['start']} - ${daySchedule['end']}';
+    return '${daySchedule.startTime} - ${daySchedule.endTime}';
   }
 
   void _showErrorSnackBar(String message) {
@@ -335,7 +376,7 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
           final isSelected = DateUtils.isSameDay(date, _selectedDate);
           final isAvailable = _isDateAvailable(date);
           final dayName = DateFormat('EEEE').format(date);
-          final timeRange = _getTimeRange(dayName);
+          final timeRange = _getTimeRange(date.weekday % 7);
 
           return Tooltip(
             message: timeRange,
@@ -457,7 +498,7 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
     if (slots.isEmpty) {
       final isDateAvailable = _isDateAvailable(_selectedDate);
       final dayName = DateFormat('EEEE').format(_selectedDate);
-      final timeRange = _getTimeRange(dayName);
+      final timeRange = _getTimeRange(_selectedDate.weekday % 7);
 
       return Center(
         child: Column(
