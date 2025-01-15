@@ -38,53 +38,73 @@ class ScheduleProvider extends ChangeNotifier {
   }
 
   // Working Hours Methods
-  Future<wh.WorkingHours> loadWorkingHours(String electricianId) async {
+  Future<List<wh.WorkingHours>> loadWorkingHours(String electricianId) async {
+    LoggerService.info('Loading working hours from database');
+    LoggerService.info('Electrician ID: $electricianId');
+
     try {
-      _loading = true;
-      _error = null;
-      notifyListeners();
+      final response = await _supabase.rpc('get_working_hours',
+          params: {'p_electrician_id': electricianId});
 
-      final response = await _supabase
-          .from('electricians')
-          .select('working_hours')
-          .eq('id', electricianId)
-          .single();
+      LoggerService.info('Database query response: $response');
 
-      final workingHours = wh.WorkingHours.fromJson(response['working_hours']);
-      _loading = false;
-      notifyListeners();
+      if (response == null) {
+        LoggerService.error('No response from database query');
+        throw Exception('Failed to load working hours');
+      }
+
+      final workingHours = (response as List)
+          .map((day) => wh.WorkingHours.fromJson(day as Map<String, dynamic>))
+          .toList();
+
+      LoggerService.info('Parsed working hours: $workingHours');
       return workingHours;
     } catch (e) {
-      _error = e.toString();
-      _loading = false;
-      notifyListeners();
+      LoggerService.error(
+          'Database error while loading working hours: ${e.toString()}');
       rethrow;
     }
   }
 
-  Future<wh.WorkingHours> updateWorkingHours(
-      String electricianId, Map<String, dynamic> workingHours) async {
+  Future<List<wh.WorkingHours>> updateWorkingHours(
+      String electricianId, List<wh.WorkingHours> workingHours) async {
+    LoggerService.info('Updating working hours in database');
+    LoggerService.info('Electrician ID: $electricianId');
+    LoggerService.info('New working hours data: $workingHours');
+
     try {
-      _loading = true;
-      _error = null;
-      notifyListeners();
+      // Update each day's working hours
+      for (final day in workingHours) {
+        await _supabase.from('working_hours').upsert({
+          'electrician_id': electricianId,
+          'day_of_week': day.dayOfWeek,
+          'start_time': day.startTime,
+          'end_time': day.endTime,
+          'is_working_day': day.isWorkingDay,
+        }, onConflict: 'electrician_id, day_of_week');
+      }
 
-      final response = await _supabase
-          .from('electricians')
-          .update({'working_hours': workingHours})
-          .eq('id', electricianId)
-          .select('working_hours')
-          .single();
-
-      final updatedWorkingHours =
-          wh.WorkingHours.fromJson(response['working_hours']);
-      _loading = false;
-      notifyListeners();
-      return updatedWorkingHours;
+      // Reload the working hours to get the updated data
+      return await loadWorkingHours(electricianId);
     } catch (e) {
-      _error = e.toString();
-      _loading = false;
-      notifyListeners();
+      LoggerService.error(
+          'Database error while updating working hours: ${e.toString()}');
+      rethrow;
+    }
+  }
+
+  Future<bool> isWorkingTime(String electricianId, DateTime dateTime) async {
+    try {
+      final response = await _supabase.rpc('is_working_time', params: {
+        'p_electrician_id': electricianId,
+        'p_date': dateTime.toIso8601String().split('T')[0],
+        'p_time':
+            '${dateTime.hour.toString().padLeft(2, '0')}:${dateTime.minute.toString().padLeft(2, '0')}'
+      });
+
+      return response as bool;
+    } catch (e) {
+      LoggerService.error('Error checking working time: ${e.toString()}');
       rethrow;
     }
   }
