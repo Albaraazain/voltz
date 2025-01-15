@@ -347,7 +347,7 @@ class ElectricianProfileScreen extends StatelessWidget {
                           Icons.notifications_outlined,
                           () {
                             Navigator.pushNamed(
-                                context, '/electrician/notifications');
+                                context, '/electrician/notification-settings');
                           },
                         ),
                         const SizedBox(height: 24),
