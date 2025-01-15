@@ -16,7 +16,7 @@ class NotificationRepository {
       final response = await _client
           .from('notifications')
           .select()
-          .eq('user_id', userId)
+          .eq('profile_id', userId)
           .order('created_at', ascending: false)
           .limit(limit ?? 20)
           .range(offset ?? 0, (offset ?? 0) + (limit ?? 20) - 1);
@@ -38,8 +38,8 @@ class NotificationRepository {
       final response = await _client
           .from('notifications')
           .select()
-          .eq('user_id', userId)
-          .eq('is_read', false)
+          .eq('profile_id', userId)
+          .eq('read', false)
           .order('created_at', ascending: false);
 
       final notifications = (response as List)
@@ -57,8 +57,8 @@ class NotificationRepository {
       final response = await _client
           .from('notifications')
           .select('id')
-          .eq('user_id', userId)
-          .eq('is_read', false);
+          .eq('profile_id', userId)
+          .eq('read', false);
 
       return ApiResponse.success((response as List).length);
     } catch (error, stackTrace) {
@@ -71,7 +71,7 @@ class NotificationRepository {
     try {
       final response = await _client
           .from('notifications')
-          .update({'is_read': true})
+          .update({'read': true})
           .eq('id', notificationId)
           .select()
           .single();
@@ -87,8 +87,8 @@ class NotificationRepository {
     try {
       final response = await _client
           .from('notifications')
-          .update({'is_read': true})
-          .eq('user_id', userId)
+          .update({'read': true})
+          .eq('profile_id', userId)
           .select();
 
       final notifications = (response as List)
@@ -109,7 +109,7 @@ class NotificationRepository {
       final response = await _client
           .from('notifications')
           .select()
-          .eq('user_id', userId)
+          .eq('profile_id', userId)
           .eq('type', type.toString().split('.').last)
           .order('created_at', ascending: false);
 
@@ -131,7 +131,7 @@ class NotificationRepository {
       final response = await _client
           .from('notifications')
           .select()
-          .eq('user_id', userId)
+          .eq('profile_id', userId)
           .eq('related_id', relatedId)
           .order('created_at', ascending: false);
 
@@ -151,7 +151,7 @@ class NotificationRepository {
     return _client
         .from('notifications')
         .stream(primaryKey: ['id'])
-        .eq('user_id', userId)
+        .eq('profile_id', userId)
         .order('created_at')
         .map((data) {
           try {
@@ -173,7 +173,7 @@ class NotificationRepository {
       await _client
           .from('notifications')
           .delete()
-          .eq('user_id', userId)
+          .eq('profile_id', userId)
           .lt('created_at', cutoffDate.toIso8601String());
 
       return ApiResponse.success(null);
