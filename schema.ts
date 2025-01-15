@@ -191,40 +191,43 @@ export type Database = {
       notifications: {
         Row: {
           created_at: string
-          electrician_id: string
+          profile_id: string
           id: string
           message: string
           read: boolean
           title: string
           type: string
           updated_at: string
+          related_id: string | null
         }
         Insert: {
           created_at?: string
-          electrician_id: string
+          profile_id: string
           id?: string
           message: string
           read?: boolean
           title: string
           type: string
           updated_at?: string
+          related_id?: string
         }
         Update: {
           created_at?: string
-          electrician_id?: string
+          profile_id?: string
           id?: string
           message?: string
           read?: boolean
           title?: string
           type?: string
           updated_at?: string
+          related_id?: string
         }
         Relationships: [
           {
-            foreignKeyName: "notifications_electrician_id_fkey"
-            columns: ["electrician_id"]
+            foreignKeyName: "notifications_profile_id_fkey"
+            columns: ["profile_id"]
             isOneToOne: false
-            referencedRelation: "electricians"
+            referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
         ]
