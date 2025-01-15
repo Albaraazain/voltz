@@ -18,7 +18,7 @@ class Electrician {
   final bool isVerified;
   final List<Service> services;
   final List<String> specialties;
-  final WorkingHours workingHours;
+  final List<WorkingHours> workingHours;
   final PaymentInfo? paymentInfo;
   final NotificationPreferences notificationPreferences;
 
@@ -56,7 +56,7 @@ class Electrician {
       'is_verified': isVerified,
       'services': services.map((s) => s.toJson()).toList(),
       'specialties': specialties,
-      'working_hours': workingHours.toJson(),
+      'working_hours': workingHours.map((wh) => wh.toJson()).toList(),
       'payment_info': paymentInfo?.toJson(),
       'notification_preferences': notificationPreferences.toJson(),
     };
@@ -80,7 +80,10 @@ class Electrician {
               .toList() ??
           [],
       specialties: List<String>.from(json['specialties'] ?? []),
-      workingHours: WorkingHours.fromJson(json['working_hours']),
+      workingHours: (json['working_hours'] as List?)
+              ?.map((wh) => WorkingHours.fromJson(wh))
+              .toList() ??
+          [],
       paymentInfo: json['payment_info'] != null
           ? PaymentInfo.fromJson(json['payment_info'])
           : null,
@@ -104,7 +107,7 @@ class Electrician {
     bool? isVerified,
     List<Service>? services,
     List<String>? specialties,
-    WorkingHours? workingHours,
+    List<WorkingHours>? workingHours,
     PaymentInfo? paymentInfo,
     NotificationPreferences? notificationPreferences,
   }) {
@@ -131,65 +134,56 @@ class Electrician {
 
   // Helper methods for working hours
   bool isDayEnabled(String day) {
-    switch (day.toLowerCase()) {
-      case 'monday':
-        return workingHours.monday != null;
-      case 'tuesday':
-        return workingHours.tuesday != null;
-      case 'wednesday':
-        return workingHours.wednesday != null;
-      case 'thursday':
-        return workingHours.thursday != null;
-      case 'friday':
-        return workingHours.friday != null;
-      case 'saturday':
-        return workingHours.saturday != null;
-      case 'sunday':
-        return workingHours.sunday != null;
-      default:
-        return false;
-    }
+    final dayOfWeek = WorkingHours.getDayOfWeek(day);
+    final schedule = workingHours.firstWhere(
+      (wh) => wh.dayOfWeek == dayOfWeek,
+      orElse: () => WorkingHours(
+        id: '',
+        electricianId: id,
+        dayOfWeek: dayOfWeek,
+        startTime: '09:00',
+        endTime: '17:00',
+        isWorkingDay: false,
+        createdAt: DateTime.now(),
+        updatedAt: DateTime.now(),
+      ),
+    );
+    return schedule.isWorkingDay;
   }
 
   String? getDayStartTime(String day) {
-    switch (day.toLowerCase()) {
-      case 'monday':
-        return workingHours.monday?.start;
-      case 'tuesday':
-        return workingHours.tuesday?.start;
-      case 'wednesday':
-        return workingHours.wednesday?.start;
-      case 'thursday':
-        return workingHours.thursday?.start;
-      case 'friday':
-        return workingHours.friday?.start;
-      case 'saturday':
-        return workingHours.saturday?.start;
-      case 'sunday':
-        return workingHours.sunday?.start;
-      default:
-        return null;
-    }
+    final dayOfWeek = WorkingHours.getDayOfWeek(day);
+    final schedule = workingHours.firstWhere(
+      (wh) => wh.dayOfWeek == dayOfWeek,
+      orElse: () => WorkingHours(
+        id: '',
+        electricianId: id,
+        dayOfWeek: dayOfWeek,
+        startTime: '09:00',
+        endTime: '17:00',
+        isWorkingDay: false,
+        createdAt: DateTime.now(),
+        updatedAt: DateTime.now(),
+      ),
+    );
+    return schedule.isWorkingDay ? schedule.startTime : null;
   }
 
   String? getDayEndTime(String day) {
-    switch (day.toLowerCase()) {
-      case 'monday':
-        return workingHours.monday?.end;
-      case 'tuesday':
-        return workingHours.tuesday?.end;
-      case 'wednesday':
-        return workingHours.wednesday?.end;
-      case 'thursday':
-        return workingHours.thursday?.end;
-      case 'friday':
-        return workingHours.friday?.end;
-      case 'saturday':
-        return workingHours.saturday?.end;
-      case 'sunday':
-        return workingHours.sunday?.end;
-      default:
-        return null;
-    }
+    final dayOfWeek = WorkingHours.getDayOfWeek(day);
+    final schedule = workingHours.firstWhere(
+      (wh) => wh.dayOfWeek == dayOfWeek,
+      orElse: () => WorkingHours(
+        id: '',
+        electricianId: id,
+        dayOfWeek: dayOfWeek,
+        startTime: '09:00',
+        endTime: '17:00',
+        isWorkingDay: false,
+        createdAt: DateTime.now(),
+        updatedAt: DateTime.now(),
+      ),
+    );
+    return schedule.isWorkingDay ? schedule.endTime : null;
   }
 }
