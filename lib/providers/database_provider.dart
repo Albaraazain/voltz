@@ -22,26 +22,42 @@ class DatabaseProvider with ChangeNotifier {
   Homeowner? _currentHomeowner;
   Profile? _currentProfile;
   bool _isLoading = false;
+  bool _isInitialized = false;
 
   DatabaseProvider(this._authProvider) {
     _initialize();
     _authProvider.addListener(_onAuthStateChanged);
   }
 
-  void _onAuthStateChanged() {
+  Future<void> _initialize() async {
+    if (_isInitialized) return;
+    _isInitialized = true;
+
     if (_authProvider.isAuthenticated) {
-      loadCurrentProfile();
-    } else {
-      _currentHomeowner = null;
-      _currentProfile = null;
-      notifyListeners();
+      await loadInitialData();
     }
   }
 
-  @override
-  void dispose() {
-    _authProvider.removeListener(_onAuthStateChanged);
-    super.dispose();
+  void _onAuthStateChanged() async {
+    if (_authProvider.isAuthenticated) {
+      // Reset state before loading new data
+      _currentHomeowner = null;
+      _currentProfile = null;
+      _electricians = [];
+      _isInitialized = false;
+      notifyListeners();
+
+      // Load new data
+      await loadInitialData();
+    } else {
+      // Clear all state on sign out
+      _currentHomeowner = null;
+      _currentProfile = null;
+      _electricians = [];
+      _isInitialized = false;
+      _isLoading = false;
+      notifyListeners();
+    }
   }
 
   // Expose client for debugging
@@ -52,72 +68,156 @@ class DatabaseProvider with ChangeNotifier {
   Profile? get currentProfile => _currentProfile;
   bool get isLoading => _isLoading;
 
-  Future<void> _initialize() async {
-    if (_authProvider.isAuthenticated) {
-      await loadCurrentProfile();
-      await loadElectricians();
-    }
-  }
-
   Future<void> loadCurrentProfile() async {
+    if (_isLoading) return;
+
     try {
       _isLoading = true;
       notifyListeners();
 
       final userId = _authProvider.userId;
-      LoggerService.info('Loading profile for user: $userId');
-      if (userId == null) throw Exception('User not authenticated');
-
-      // Load profile
-      final profileResponse =
-          await _client.from('profiles').select().eq('id', userId).single();
-      LoggerService.debug('Loaded profile: $profileResponse');
-      _currentProfile = Profile.fromJson(profileResponse);
-
-      // Load role-specific data
-      switch (_currentProfile!.userType.toLowerCase()) {
-        case 'homeowner':
-          LoggerService.info(
-              'Loading homeowner data for profile: ${_currentProfile!.id}');
-          final homeownerResponse = await _client
-              .from('homeowners')
-              .select()
-              .eq('profile_id', userId)
-              .single();
-          LoggerService.debug('Loaded homeowner data: $homeownerResponse');
-          _currentHomeowner = Homeowner.fromJson(
-            homeownerResponse,
-            profile: _currentProfile!,
-          );
-          LoggerService.info('Successfully loaded homeowner profile');
-          break;
-        case 'electrician':
-          LoggerService.info(
-              'Loading electrician data for profile: ${_currentProfile!.id}');
-          // Load electrician data
-          await loadElectricians();
-          if (_electricians.isEmpty) {
-            throw Exception('Electrician profile not found');
-          }
-          LoggerService.info('Successfully loaded electrician profile');
-          break;
-        default:
-          throw Exception('Invalid user type: ${_currentProfile!.userType}');
+      if (userId == null) {
+        LoggerService.debug('No user ID available');
+        return;
       }
 
+      LoggerService.info('Loading profile for user: $userId');
+
+      final profileResponse =
+          await _client.from('profiles').select().eq('id', userId).single();
+
+      if (profileResponse == null) {
+        LoggerService.debug('No profile found for user: $userId');
+        return;
+      }
+
+      _currentProfile = Profile.fromJson(profileResponse);
+      notifyListeners();
+
+      if (_currentProfile?.userType == 'electrician') {
+        await _loadElectricianData();
+      } else if (_currentProfile?.userType == 'homeowner') {
+        await _loadHomeownerData();
+        await loadElectricians();
+      }
+    } catch (e, stackTrace) {
+      LoggerService.debug('Error loading profile: $e\n$stackTrace');
+    } finally {
       _isLoading = false;
       notifyListeners();
-    } catch (e) {
+    }
+  }
+
+  Future<void> loadInitialData() async {
+    if (!_authProvider.isAuthenticated) return;
+
+    try {
+      _isLoading = true;
+      notifyListeners();
+
+      final userId = _authProvider.userId;
+      if (userId == null) {
+        LoggerService.debug('No user ID available');
+        return;
+      }
+
+      // Load profile first
+      final profileResponse =
+          await _client.from('profiles').select().eq('id', userId).single();
+
+      if (profileResponse == null) {
+        LoggerService.debug('No profile found for user: $userId');
+        return;
+      }
+
+      _currentProfile = Profile.fromJson(profileResponse);
+      LoggerService.debug('Current profile type: ${_currentProfile?.userType}');
+
+      // Load role-specific data based on user type
+      if (_currentProfile?.userType == 'electrician') {
+        await _loadElectricianData();
+        // For electricians, we only need their own profile
+        await loadElectricians();
+      } else if (_currentProfile?.userType == 'homeowner') {
+        await _loadHomeownerData();
+        // For homeowners, we load all verified electricians
+        await loadElectricians();
+      }
+
+      notifyListeners();
+    } catch (e, stackTrace) {
+      LoggerService.error('Failed to load initial data', e, stackTrace);
+      rethrow;
+    } finally {
       _isLoading = false;
-      LoggerService.error(
-        'Failed to load current profile',
+      notifyListeners();
+    }
+  }
+
+  Future<void> _loadElectricianData() async {
+    try {
+      LoggerService.info(
+          'Loading electrician data for profile: ${_currentProfile!.id}');
+
+      final queryString = '''
+        *,
+        profile:profiles (
+          id,
+          email,
+          user_type,
+          name,
+          created_at,
+          last_login_at
+        )
+      ''';
+
+      final electricianResponse = await _client
+          .from('electricians')
+          .select(queryString)
+          .eq('profile_id', _currentProfile!.id)
+          .single();
+
+      if (electricianResponse == null) {
+        LoggerService.error(
+            'No electrician data found for profile: ${_currentProfile!.id}');
+        throw Exception('Electrician profile not found');
+      }
+
+      // Store the electrician data in the _electricians list
+      final profile = Profile.fromJson(electricianResponse['profile']);
+      _electricians = [Electrician.fromJson(electricianResponse)];
+
+      LoggerService.info('Successfully loaded electrician profile');
+    } catch (e, stackTrace) {
+      LoggerService.error('Failed to load electrician data', e, stackTrace);
+      rethrow;
+    }
+  }
+
+  Future<void> _loadHomeownerData() async {
+    try {
+      LoggerService.info(
+          'Loading homeowner data for profile: ${_currentProfile!.id}');
+      final homeownerResponse = await _client
+          .from('homeowners')
+          .select()
+          .eq('profile_id', _currentProfile!.id)
+          .single();
+      LoggerService.debug('Loaded homeowner data: $homeownerResponse');
+      _currentHomeowner = Homeowner.fromJson(
+        homeownerResponse,
+        profile: _currentProfile!,
       );
-      notifyListeners();
+      LoggerService.info('Successfully loaded homeowner profile');
+    } catch (e, stackTrace) {
+      LoggerService.error('Failed to load homeowner data', e, stackTrace);
       rethrow;
     }
   }
 
   Future<void> loadElectricians() async {
+    if (_isLoading) return;
+
     try {
       _isLoading = true;
       notifyListeners();
@@ -142,29 +242,25 @@ class DatabaseProvider with ChangeNotifier {
       var query = _client.from('electricians').select(queryString);
 
       // Add filters based on user type
-      if (_currentProfile?.userType.toLowerCase() == 'homeowner') {
+      if (_currentProfile?.userType == 'homeowner') {
         // For homeowners, only show verified electricians
         query = query.eq('is_verified', true);
         LoggerService.debug('Added homeowner filter: is_verified = true');
-      } else if (_currentProfile?.userType.toLowerCase() == 'electrician' &&
+      } else if (_currentProfile?.userType == 'electrician' &&
           _currentProfile?.id != null) {
         // For electricians, only show their own profile
         query = query.eq('profile_id', _currentProfile!.id);
         LoggerService.debug(
             'Added electrician filter: profile_id = ${_currentProfile!.id}');
-      } else if (_currentProfile?.userType.toLowerCase() == 'admin') {
-        // Admins can see all electricians
-        LoggerService.debug('No filter added for admin user');
-      } else {
-        // For unauthenticated users or unknown types, show no electricians
-        _electricians = [];
-        _isLoading = false;
-        notifyListeners();
-        return;
       }
 
       final response = await query;
       LoggerService.debug('Electricians response: $response');
+
+      if (response == null) {
+        _electricians = [];
+        return;
+      }
 
       _electricians = response
           .map((data) {
@@ -174,23 +270,11 @@ class DatabaseProvider with ChangeNotifier {
 
               if (profileData == null) {
                 LoggerService.warning(
-                    'Missing profile data for electrician ${data['id']} with profile_id: ${data['profile_id']}');
-                // Create a temporary profile for display purposes
-                profile = Profile(
-                  id: data['profile_id'],
-                  email: 'Unknown',
-                  userType: 'electrician',
-                  name: 'Electrician #${data['id'].toString().substring(0, 8)}',
-                  createdAt: DateTime.parse(data['created_at']),
-                );
-                LoggerService.warning(
-                    'Created temporary profile for electrician: ${data['id']}');
-              } else {
-                LoggerService.debug(
-                    'Successfully loaded profile data: $profileData');
-                profile = Profile.fromJson(profileData);
+                    'Missing profile data for electrician ${data['id']}');
+                return null;
               }
 
+              profile = Profile.fromJson(profileData);
               final electrician = Electrician.fromJson(data);
               return electrician.copyWith(profile: profile);
             } catch (e, stackTrace) {
@@ -203,13 +287,13 @@ class DatabaseProvider with ChangeNotifier {
           .cast<Electrician>()
           .toList();
 
-      _isLoading = false;
       notifyListeners();
     } catch (e, stackTrace) {
-      _isLoading = false;
       LoggerService.error('Failed to load electricians', e, stackTrace);
+      _electricians = [];
+    } finally {
+      _isLoading = false;
       notifyListeners();
-      rethrow;
     }
   }
 
@@ -507,7 +591,6 @@ class DatabaseProvider with ChangeNotifier {
         'years_of_experience': electrician.yearsOfExperience,
         'is_verified': electrician.isVerified,
         'services': electrician.services.map((s) => s.toJson()).toList(),
-        'working_hours': electrician.workingHours.toJson(),
         'payment_info': electrician.paymentInfo?.toJson(),
         'notification_preferences':
             electrician.notificationPreferences.toJson(),
