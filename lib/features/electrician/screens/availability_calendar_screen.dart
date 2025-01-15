@@ -5,7 +5,6 @@ import '../../../core/constants/text_styles.dart';
 import '../../../providers/schedule_provider.dart';
 import '../../../providers/electrician_provider.dart';
 import '../../../models/schedule_slot_model.dart';
-import '../../common/widgets/custom_button.dart';
 
 class AvailabilityCalendarScreen extends StatefulWidget {
   const AvailabilityCalendarScreen({super.key});
