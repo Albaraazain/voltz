@@ -4,7 +4,6 @@ import '../../../core/constants/colors.dart';
 import '../../../core/constants/text_styles.dart';
 import '../../../providers/database_provider.dart';
 import '../../../providers/auth_provider.dart';
-import '../../../models/electrician_model.dart';
 import '../widgets/service_item.dart';
 import '../widgets/review_card.dart';
 import '../../common/widgets/custom_button.dart';
