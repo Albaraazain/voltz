@@ -12,6 +12,7 @@ import 'providers/job_provider.dart';
 import 'providers/electrician_stats_provider.dart';
 import 'providers/availability_provider.dart';
 import 'providers/schedule_provider.dart';
+import 'providers/notification_provider.dart';
 import 'features/common/screens/splash_screen.dart';
 import 'features/homeowner/screens/homeowner_main_screen.dart';
 import 'features/electrician/screens/electrician_main_screen.dart';
@@ -29,7 +30,11 @@ import 'models/review_model.dart';
 import 'models/job_model.dart';
 import 'features/homeowner/screens/book_appointment_screen.dart';
 import 'models/schedule_slot_model.dart';
-import 'features/homeowner/screens/notifications_screen.dart';
+import 'features/common/screens/notifications_screen.dart';
+import 'features/homeowner/screens/notifications_screen.dart' as homeowner;
+import 'features/electrician/screens/notification_settings_screen.dart'
+    as electrician;
+import 'features/electrician/screens/recent_jobs_screen.dart';
 
 Future<void> validateDatabaseSchema() async {
   final client = SupabaseConfig.client;
@@ -174,6 +179,24 @@ class MyApp extends StatelessWidget {
             return previous ?? ScheduleProvider(SupabaseConfig.client);
           },
         ),
+        ChangeNotifierProxyProvider<AuthProvider, NotificationProvider>(
+          create: (context) {
+            LoggerService.info('Creating NotificationProvider');
+            final authProvider = context.read<AuthProvider>();
+            return NotificationProvider(
+              SupabaseConfig.client,
+              authProvider.user?.id,
+            );
+          },
+          update: (context, auth, previous) {
+            LoggerService.info(
+                'Updating NotificationProvider with new auth state');
+            return NotificationProvider(
+              SupabaseConfig.client,
+              auth.user?.id,
+            );
+          },
+        ),
       ],
       child: MaterialApp(
         title: 'ElectriConnect',
@@ -192,6 +215,14 @@ class MyApp extends StatelessWidget {
             case '/notifications':
               return MaterialPageRoute(
                 builder: (_) => const NotificationsScreen(),
+              );
+            case '/homeowner/notification-settings':
+              return MaterialPageRoute(
+                builder: (_) => const homeowner.NotificationsScreen(),
+              );
+            case '/electrician/notification-settings':
+              return MaterialPageRoute(
+                builder: (_) => const electrician.NotificationSettingsScreen(),
               );
             case '/homeowner/dashboard':
               return MaterialPageRoute(
@@ -224,6 +255,10 @@ class MyApp extends StatelessWidget {
             case '/electrician/payment':
               return MaterialPageRoute(
                 builder: (_) => const PaymentSettingsScreen(),
+              );
+            case '/electrician/recent-jobs':
+              return MaterialPageRoute(
+                builder: (_) => const RecentJobsScreen(),
               );
             case '/review-details':
               return MaterialPageRoute(
