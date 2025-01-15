@@ -142,11 +142,9 @@ class ProfileScreen extends StatelessWidget {
                         icon: Icons.notifications_outlined,
                         title: 'Notifications',
                         onTap: () {
-                          Navigator.push(
+                          Navigator.pushNamed(
                             context,
-                            MaterialPageRoute(
-                              builder: (context) => const NotificationsScreen(),
-                            ),
+                            '/homeowner/notification-settings',
                           );
                         },
                       ),
