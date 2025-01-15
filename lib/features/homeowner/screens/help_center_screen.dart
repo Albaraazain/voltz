@@ -2,6 +2,9 @@ import 'package:flutter/material.dart';
 import '../../../core/constants/colors.dart';
 import '../../../core/constants/text_styles.dart';
 import '../../../widgets/primary_button.dart';
+import 'contact_support_screen.dart';
+import 'report_issue_screen.dart';
+import 'all_faqs_screen.dart';
 
 class HelpCenterScreen extends StatelessWidget {
   const HelpCenterScreen({super.key});
@@ -134,9 +137,11 @@ class HelpCenterScreen extends StatelessWidget {
               subtitle: 'Get help from our support team',
               icon: Icons.headset_mic_outlined,
               onTap: () {
-                // TODO: Implement contact support
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Opening support chat...')),
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const ContactSupportScreen(),
+                  ),
                 );
               },
             ),
@@ -146,9 +151,11 @@ class HelpCenterScreen extends StatelessWidget {
               subtitle: "Let us know if something's not working",
               icon: Icons.bug_report_outlined,
               onTap: () {
-                // TODO: Implement issue reporting
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Opening issue form...')),
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const ReportIssueScreen(),
+                  ),
                 );
               },
             ),
@@ -186,9 +193,11 @@ class HelpCenterScreen extends StatelessWidget {
             const SizedBox(height: 32),
             PrimaryButton(
               onPressed: () {
-                // TODO: Implement browse all FAQs
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Opening full FAQ list...')),
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const AllFAQsScreen(),
+                  ),
                 );
               },
               child: const Text('Browse All FAQs'),
