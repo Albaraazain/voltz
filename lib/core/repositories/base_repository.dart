@@ -1,6 +1,5 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../utils/api_response.dart';
-import '../utils/error_handler.dart';
 
 /// Base repository class that implements common CRUD operations
 abstract class BaseRepository<T> {
