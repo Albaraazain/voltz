@@ -29,6 +29,7 @@ import 'models/review_model.dart';
 import 'models/job_model.dart';
 import 'features/homeowner/screens/book_appointment_screen.dart';
 import 'models/schedule_slot_model.dart';
+import 'features/homeowner/screens/notifications_screen.dart';
 
 Future<void> validateDatabaseSchema() async {
   final client = SupabaseConfig.client;
@@ -188,6 +189,10 @@ class MyApp extends StatelessWidget {
           LoggerService.info('Generating route for: ${settings.name}');
 
           switch (settings.name) {
+            case '/notifications':
+              return MaterialPageRoute(
+                builder: (_) => const NotificationsScreen(),
+              );
             case '/homeowner/dashboard':
               return MaterialPageRoute(
                 builder: (_) => const HomeownerMainScreen(),
