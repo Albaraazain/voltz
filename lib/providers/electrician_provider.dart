@@ -15,7 +15,7 @@ class ElectricianProvider extends ChangeNotifier {
   String _currentStatus = 'Available';
   List<Job> _activeJobs = [];
   List<Service> _services = [];
-  wh.WorkingHours? _workingHours;
+  List<wh.WorkingHours>? _workingHours;
   bool _isLoading = false;
 
   ElectricianProvider(this._databaseProvider) {
@@ -26,7 +26,7 @@ class ElectricianProvider extends ChangeNotifier {
   String get currentStatus => _currentStatus;
   List<Job> get activeJobs => _activeJobs;
   List<Service> get services => _services;
-  wh.WorkingHours? get workingHours => _workingHours;
+  List<wh.WorkingHours>? get workingHours => _workingHours;
   bool get isLoading => _isLoading;
 
   Future<void> _initialize() async {
@@ -136,23 +136,40 @@ class ElectricianProvider extends ChangeNotifier {
       notifyListeners();
 
       final electricianId = getCurrentElectricianId();
-      final response = await _client
-          .from('electricians')
-          .select('working_hours')
-          .eq('id', electricianId)
-          .single();
+      LoggerService.info(
+          'Loading working hours for electrician: $electricianId');
 
-      if (response['working_hours'] != null) {
-        _workingHours = wh.WorkingHours.fromJson(response['working_hours']);
-      } else {
-        _workingHours = wh.WorkingHours.defaults();
+      final response = await _client.rpc(
+        'get_working_hours',
+        params: {'p_electrician_id': electricianId},
+      );
+
+      if (response == null) {
+        LoggerService.error('No response from database query');
+        throw Exception('Failed to load working hours');
       }
+
+      _workingHours = (response as List)
+          .map((day) => wh.WorkingHours.fromJson({
+                'id': '${electricianId}_${day['day_of_week']}',
+                'electrician_id': electricianId,
+                'day_of_week': day['day_of_week'],
+                'start_time': day['start_time'].toString().split('.')[0],
+                'end_time': day['end_time'].toString().split('.')[0],
+                'is_working_day': day['is_working_day'],
+                'created_at': DateTime.now().toIso8601String(),
+                'updated_at': DateTime.now().toIso8601String(),
+              }))
+          .toList();
+
+      LoggerService.info(
+          'Successfully loaded ${_workingHours?.length} working hours records');
 
       _isLoading = false;
       notifyListeners();
     } catch (e) {
       _isLoading = false;
-      LoggerService.error('Failed to load working hours', e);
+      LoggerService.error('Failed to load working hours: ${e.toString()}');
       notifyListeners();
       rethrow;
     }
@@ -264,15 +281,57 @@ class ElectricianProvider extends ChangeNotifier {
     }
   }
 
-  Future<void> updateWorkingHours(wh.WorkingHours workingHours) async {
+  Future<void> updateWorkingHours(List<wh.WorkingHours> workingHours) async {
     try {
-      final electricianId = getCurrentElectricianId();
-      await _client.from('electricians').update(
-          {'working_hours': workingHours.toJson()}).eq('id', electricianId);
+      _isLoading = true;
+      notifyListeners();
 
+      final electricianId = getCurrentElectricianId();
+      LoggerService.info(
+          'Updating working hours for electrician: $electricianId');
+
+      // Update each day's working hours
+      for (final day in workingHours) {
+        await _client.from('working_hours').upsert({
+          'electrician_id': electricianId,
+          'day_of_week': day.dayOfWeek,
+          'start_time': day.startTime,
+          'end_time': day.endTime,
+          'is_working_day': day.isWorkingDay,
+        }, onConflict: 'electrician_id, day_of_week');
+      }
+
+      // Reload working hours to get the updated data
+      await loadWorkingHours();
+
+      LoggerService.info('Successfully updated working hours');
+
+      _isLoading = false;
       notifyListeners();
     } catch (e) {
-      LoggerService.error('Failed to update working hours', e);
+      _isLoading = false;
+      LoggerService.error('Failed to update working hours: ${e.toString()}');
+      notifyListeners();
+      rethrow;
+    }
+  }
+
+  Future<bool> isWorkingTime(DateTime dateTime) async {
+    try {
+      final electricianId = getCurrentElectricianId();
+      LoggerService.info(
+          'Checking working time for electrician: $electricianId');
+
+      final response = await _client.rpc('is_working_time', params: {
+        'p_electrician_id': electricianId,
+        'p_date': dateTime.toIso8601String().split('T')[0],
+        'p_time':
+            '${dateTime.hour.toString().padLeft(2, '0')}:${dateTime.minute.toString().padLeft(2, '0')}'
+      });
+
+      return response as bool;
+    } catch (e) {
+      LoggerService.error('Error checking working time: ${e.toString()}');
       rethrow;
     }
   }
