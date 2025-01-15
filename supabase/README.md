@@ -48,11 +48,12 @@ This directory contains the database migrations and structure for the Voltz appl
 
 ### notifications
 - `id` (uuid, primary key)
-- `electrician_id` (uuid, references electricians)
+- `profile_id` (uuid, references profiles)
 - `title` (text)
 - `message` (text)
 - `type` (text: 'job_request', 'job_update', 'payment', 'review', 'system')
 - `read` (boolean)
+- `related_id` (uuid, optional reference to related entity)
 - `created_at` (timestamp)
 - `updated_at` (timestamp)
 
@@ -60,14 +61,14 @@ This directory contains the database migrations and structure for the Voltz appl
 
 Each table has RLS policies to ensure data security:
 - Users can only access their own data
-- Electricians can only view their own notifications
+- Users can only view their own notifications
 - System can create notifications
-- Electricians can mark their notifications as read
+- Users can mark their own notifications as read
 
 ## Indexes
 
 Performance optimizations through indexes:
-- `notifications`: electrician_id, read status, created_at
+- `notifications`: profile_id, read status, created_at
 - Foreign key columns
 - Commonly queried fields
 
