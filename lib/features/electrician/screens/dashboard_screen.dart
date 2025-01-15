@@ -5,10 +5,12 @@ import '../../../core/constants/text_styles.dart';
 import '../../../providers/database_provider.dart';
 import '../../../providers/electrician_stats_provider.dart';
 import '../../../providers/job_provider.dart';
+import '../../../providers/notification_provider.dart';
 import '../widgets/stats_card.dart';
 import '../widgets/recent_job_card.dart';
 import '../widgets/earnings_chart.dart';
 import '../../common/widgets/loading_indicator.dart';
+import '../../../core/services/logger_service.dart';
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
@@ -25,48 +27,131 @@ class _DashboardScreenState extends State<DashboardScreen> {
   };
 
   bool _isInitialLoad = true;
+  bool _isRetrying = false;
 
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _loadData();
+      context.read<NotificationProvider>().startListeningToNotifications();
     });
   }
 
+  @override
+  void dispose() {
+    context.read<NotificationProvider>().stopListeningToNotifications();
+    super.dispose();
+  }
+
   Future<void> _loadData() async {
+    if (!mounted) return;
+
     try {
+      setState(() {
+        _isRetrying = true;
+      });
+
       final dbProvider = context.read<DatabaseProvider>();
-      if (dbProvider.electricians.isEmpty) {
-        await dbProvider.loadCurrentProfile();
+
+      // Wait for initial data to be loaded
+      if (dbProvider.currentProfile == null ||
+          dbProvider.electricians.isEmpty) {
+        await dbProvider.loadInitialData();
+        if (!mounted) return;
       }
 
+      // Double check that we have the current profile after loading
+      if (dbProvider.currentProfile == null) {
+        LoggerService.debug('Current profile is still null after loading');
+        throw Exception('Failed to load profile');
+      }
+
+      // Find electrician profile with proper error handling
+      final currentProfileId = dbProvider.currentProfile!.id;
+      LoggerService.debug(
+          'Looking for electrician profile with ID: $currentProfileId');
+
       final electrician = dbProvider.electricians.firstWhere(
-        (e) => e.profile.id == dbProvider.currentProfile?.id,
-        orElse: () => throw Exception('Electrician profile not found'),
+        (e) => e.profile.id == currentProfileId,
+        orElse: () {
+          LoggerService.debug(
+              'Electrician profile not found for ID: $currentProfileId');
+          throw Exception('Electrician profile not found');
+        },
       );
 
-      await context.read<ElectricianStatsProvider>().loadStats(electrician.id);
-      await context
-          .read<JobProvider>()
-          .loadJobs(electrician.id, isElectrician: true);
-    } finally {
+      // Load stats and jobs in parallel
+      await Future.wait([
+        context.read<ElectricianStatsProvider>().loadStats(electrician.id),
+        context
+            .read<JobProvider>()
+            .loadJobs(electrician.id, isElectrician: true),
+      ]);
+
       if (mounted) {
         setState(() {
           _isInitialLoad = false;
+          _isRetrying = false;
         });
+      }
+    } catch (e, stackTrace) {
+      LoggerService.debug('Dashboard loading error: $e\n$stackTrace');
+      if (mounted) {
+        setState(() {
+          _isInitialLoad = false;
+          _isRetrying = false;
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: const Text('Failed to load dashboard data'),
+            action: SnackBarAction(
+              label: 'Retry',
+              onPressed: _loadData,
+            ),
+          ),
+        );
       }
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    final dbProvider = context.watch<DatabaseProvider>();
+
+    if (_isInitialLoad || _isRetrying) {
+      return const Scaffold(
+        body: Center(
+          child: LoadingIndicator(),
+        ),
+      );
+    }
+
+    if (dbProvider.currentProfile == null) {
+      return Scaffold(
+        body: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Text('Failed to load profile'),
+              const SizedBox(height: 16),
+              ElevatedButton(
+                onPressed: _loadData,
+                child: const Text('Retry'),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
     return Scaffold(
       backgroundColor: AppColors.background,
       body: SafeArea(
-        child:
-            Consumer3<DatabaseProvider, ElectricianStatsProvider, JobProvider>(
-          builder: (context, dbProvider, statsProvider, jobProvider, child) {
+        child: Consumer4<DatabaseProvider, ElectricianStatsProvider,
+            JobProvider, NotificationProvider>(
+          builder: (context, dbProvider, statsProvider, jobProvider,
+              notificationProvider, child) {
             if (_isInitialLoad ||
                 dbProvider.isLoading ||
                 statsProvider.isLoading) {
@@ -105,7 +190,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
                           Navigator.pushNamed(context, '/notifications');
                         },
                         icon: Badge(
-                          label: Text(stats.unreadNotifications.toString()),
+                          label: Text(notificationProvider.unreadCount.data
+                                  ?.toString() ??
+                              '0'),
                           child: const Icon(Icons.notifications_outlined),
                         ),
                       ),
@@ -235,7 +322,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                               TextButton(
                                 onPressed: () {
                                   Navigator.pushNamed(
-                                      context, '/electrician/jobs');
+                                      context, '/electrician/recent-jobs');
                                 },
                                 child: Text(
                                   'View All',
