@@ -21,6 +21,7 @@ DO $$ BEGIN
         ALTER TABLE notifications DROP CONSTRAINT IF EXISTS notifications_electrician_id_fkey;
         ALTER TABLE notifications DROP CONSTRAINT IF EXISTS notifications_profile_id_fkey;
         ALTER TABLE notifications DROP CONSTRAINT IF EXISTS notifications_pkey;
+        ALTER TABLE notifications DROP CONSTRAINT IF EXISTS notifications_type_check;
         
         -- Drop existing columns that we don't want
         ALTER TABLE notifications 
