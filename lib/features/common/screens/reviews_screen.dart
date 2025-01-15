@@ -220,7 +220,7 @@ class _ReviewsScreenState extends State<ReviewsScreen> {
                 ),
               ],
             ),
-            if (review.comment != null) ...[
+            ...[
               const SizedBox(height: 16),
               Text(
                 review.comment!,
