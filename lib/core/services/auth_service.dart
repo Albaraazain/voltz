@@ -113,16 +113,10 @@ class AuthService {
 
           // Delete related records first
           LoggerService.info('Deleting electrician reviews');
-          await _client
-              .from('reviews')
-              .delete()
-              .eq('electrician_id', electrician['id']);
+          await _client.from('reviews').delete().eq('profile_id', user.id);
 
           LoggerService.info('Deleting electrician jobs');
-          await _client
-              .from('jobs')
-              .delete()
-              .eq('electrician_id', electrician['id']);
+          await _client.from('jobs').delete().eq('profile_id', user.id);
 
           LoggerService.info('Deleting electrician payments');
           await _client.from('payments').delete().eq('payee_id', user.id);
@@ -131,7 +125,7 @@ class AuthService {
           await _client
               .from('notifications')
               .delete()
-              .eq('electrician_id', electrician['id']);
+              .eq('profile_id', user.id);
 
           LoggerService.info('Deleting electrician record');
           await _client.from('electricians').delete().eq('profile_id', user.id);
