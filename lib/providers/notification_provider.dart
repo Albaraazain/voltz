@@ -6,6 +6,20 @@ import '../models/notification_model.dart';
 import '../repositories/notification_repository.dart';
 import '../core/services/logger_service.dart';
 
+/// Provider for managing notifications in the application.
+///
+/// This provider interacts with the notifications table which has the following security policies:
+///
+/// 1. Row Level Security (RLS) is enabled
+/// 2. Users can only view their own notifications (profile_id = auth.uid())
+/// 3. Users can only update their own notifications (profile_id = auth.uid())
+/// 4. System can create notifications for any user (unrestricted INSERT)
+///
+/// The notifications table uses a unified schema that works for both homeowners and electricians:
+/// - Each notification is tied to a user's profile_id
+/// - Notifications can be of different types (job_request, job_update, payment, review, system)
+/// - The read status is tracked per notification
+/// - Related entities (jobs, reviews, etc.) can be referenced via related_id
 class NotificationProvider extends ChangeNotifier {
   final NotificationRepository _repository;
   final String? _currentUserId;
