@@ -51,13 +51,8 @@ class _HomeownerHomeScreenState extends State<HomeownerHomeScreen> {
   Future<void> _loadData() async {
     try {
       final dbProvider = context.read<DatabaseProvider>();
-
-      // Load initial data if needed
-      if (dbProvider.currentProfile == null) {
-        await dbProvider.loadInitialData();
-      } else if (dbProvider.electricians.isEmpty) {
-        await dbProvider.loadElectricians();
-      }
+      await dbProvider.loadCurrentProfile();
+      await dbProvider.loadCurrentProfile();
 
       if (mounted) {
         setState(() {
@@ -80,32 +75,121 @@ class _HomeownerHomeScreenState extends State<HomeownerHomeScreen> {
     }
   }
 
+  Widget _buildServiceCategory({
+    required String title,
+    required IconData icon,
+    required Color color,
+    required VoidCallback onTap,
+  }) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: AppColors.surface,
+          borderRadius: BorderRadius.circular(16),
+          boxShadow: [
+            BoxShadow(
+              color: color.withOpacity(0.1),
+              blurRadius: 8,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: color.withOpacity(0.1),
+                shape: BoxShape.circle,
+              ),
+              child: Icon(
+                icon,
+                color: color,
+                size: 32,
+              ),
+            ),
+            const SizedBox(height: 12),
+            Text(
+              title,
+              style: AppTextStyles.bodyLarge.copyWith(
+                fontWeight: FontWeight.w600,
+              ),
+              textAlign: TextAlign.center,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildPromotionCard() {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [
+            AppColors.primary,
+            AppColors.primary.withOpacity(0.8),
+          ],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  '20% Off First Service',
+                  style: AppTextStyles.h3.copyWith(
+                    color: Colors.white,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'Book any service today and get 20% off',
+                  style: AppTextStyles.bodyMedium.copyWith(
+                    color: Colors.white.withOpacity(0.9),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          Container(
+            padding: const EdgeInsets.symmetric(
+              horizontal: 16,
+              vertical: 8,
+            ),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(20),
+            ),
+            child: Text(
+              'Book Now',
+              style: AppTextStyles.bodyMedium.copyWith(
+                color: AppColors.primary,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
-    final dbProvider = context.watch<DatabaseProvider>();
-
-    if (_isInitialLoad || dbProvider.isLoading) {
+    if (_isInitialLoad) {
       return const Scaffold(
         body: Center(
           child: CircularProgressIndicator(),
-        ),
-      );
-    }
-
-    if (dbProvider.currentProfile == null) {
-      return Scaffold(
-        body: Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              const Text('Failed to load profile'),
-              const SizedBox(height: 16),
-              ElevatedButton(
-                onPressed: _loadData,
-                child: const Text('Retry'),
-              ),
-            ],
-          ),
         ),
       );
     }
@@ -121,52 +205,169 @@ class _HomeownerHomeScreenState extends State<HomeownerHomeScreen> {
               SliverToBoxAdapter(
                 child: Padding(
                   padding: const EdgeInsets.all(24.0),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Welcome back,',
+                            style: AppTextStyles.bodyLarge.copyWith(
+                              color: AppColors.textSecondary,
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          Consumer<DatabaseProvider>(
+                            builder: (context, provider, child) {
+                              return Text(
+                                provider.currentProfile?.name ?? 'Welcome',
+                                style: AppTextStyles.h2,
+                              );
+                            },
+                          ),
+                        ],
+                      ),
+                      IconButton(
+                        onPressed: () {
+                          Navigator.pushNamed(context, '/notifications');
+                        },
+                        icon: Consumer<NotificationProvider>(
+                          builder: (context, provider, child) {
+                            final unreadCount = provider.unreadCount.when(
+                              initial: () => 0,
+                              loading: () => 0,
+                              error: (_) => 0,
+                              success: (count) => count,
+                            );
+                            return Badge(
+                              label: Text(unreadCount.toString()),
+                              child: const Icon(Icons.notifications_outlined),
+                            );
+                          },
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+
+              // Search Bar
+              SliverToBoxAdapter(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 24.0),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 8,
+                    ),
+                    decoration: BoxDecoration(
+                      color: AppColors.surface,
+                      borderRadius: BorderRadius.circular(12),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.05),
+                          blurRadius: 10,
+                          offset: const Offset(0, 2),
+                        ),
+                      ],
+                    ),
+                    child: Row(
+                      children: [
+                        const Icon(
+                          Icons.search,
+                          color: AppColors.textSecondary,
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Text(
+                            'Search for services...',
+                            style: AppTextStyles.bodyMedium.copyWith(
+                              color: AppColors.textSecondary,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+
+              // Promotion Card
+              SliverToBoxAdapter(
+                child: Padding(
+                  padding: const EdgeInsets.all(24.0),
+                  child: _buildPromotionCard(),
+                ),
+              ),
+
+              // Services Grid
+              SliverPadding(
+                padding: const EdgeInsets.symmetric(horizontal: 24.0),
+                sliver: SliverToBoxAdapter(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      Text(
+                        'Our Services',
+                        style: AppTextStyles.h3,
+                      ),
+                      const SizedBox(height: 16),
+                      GridView.count(
+                        shrinkWrap: true,
+                        physics: const NeverScrollableScrollPhysics(),
+                        crossAxisCount: 2,
+                        mainAxisSpacing: 16,
+                        crossAxisSpacing: 16,
                         children: [
-                          Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                'Welcome back,',
-                                style: AppTextStyles.bodyLarge.copyWith(
-                                  color: AppColors.textSecondary,
-                                ),
-                              ),
-                              const SizedBox(height: 4),
-                              Consumer<DatabaseProvider>(
-                                builder: (context, provider, child) {
-                                  return Text(
-                                    provider.currentProfile?.name ?? 'Welcome',
-                                    style: AppTextStyles.h2,
-                                  );
-                                },
-                              ),
-                            ],
-                          ),
-                          IconButton(
-                            onPressed: () {
-                              // Navigate to notifications screen
-                              Navigator.pushNamed(context, '/notifications');
+                          _buildServiceCategory(
+                            title: 'Electrical\nServices',
+                            icon: Icons.electrical_services,
+                            color: Colors.blue,
+                            onTap: () {
+                              Navigator.pushNamed(
+                                  context, '/browse_electricians');
                             },
-                            icon: Consumer<NotificationProvider>(
-                              builder: (context, provider, child) {
-                                final unreadCount = provider.unreadCount.when(
-                                  initial: () => 0,
-                                  loading: () => 0,
-                                  error: (_) => 0,
-                                  success: (count) => count,
-                                );
-                                return Badge(
-                                  label: Text(unreadCount.toString()),
-                                  child:
-                                      const Icon(Icons.notifications_outlined),
-                                );
-                              },
-                            ),
+                          ),
+                          _buildServiceCategory(
+                            title: 'Plumbing\nServices',
+                            icon: Icons.plumbing,
+                            color: Colors.green,
+                            onTap: () {
+                              // TODO: Implement plumbing services
+                            },
+                          ),
+                          _buildServiceCategory(
+                            title: 'HVAC\nServices',
+                            icon: Icons.ac_unit,
+                            color: Colors.orange,
+                            onTap: () {
+                              // TODO: Implement HVAC services
+                            },
+                          ),
+                          _buildServiceCategory(
+                            title: 'Cleaning\nServices',
+                            icon: Icons.cleaning_services,
+                            color: Colors.purple,
+                            onTap: () {
+                              // TODO: Implement cleaning services
+                            },
+                          ),
+                          _buildServiceCategory(
+                            title: 'Painting\nServices',
+                            icon: Icons.format_paint,
+                            color: Colors.red,
+                            onTap: () {
+                              // TODO: Implement painting services
+                            },
+                          ),
+                          _buildServiceCategory(
+                            title: 'More\nServices',
+                            icon: Icons.more_horiz,
+                            color: Colors.grey,
+                            onTap: () {
+                              // TODO: Implement more services screen
+                            },
                           ),
                         ],
                       ),
@@ -175,130 +376,59 @@ class _HomeownerHomeScreenState extends State<HomeownerHomeScreen> {
                 ),
               ),
 
-              // Active Jobs Section
-              SliverToBoxAdapter(
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 24.0),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Active Jobs',
-                        style: AppTextStyles.h3,
-                      ),
-                      const SizedBox(height: 16),
-                      const JobStatusCard(
-                        jobTitle: 'Electrical Repair',
-                        electricianName: 'Mike Johnson',
-                        status: 'In Progress',
-                        date: 'Today, 2:30 PM',
-                        progress: 0.7,
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-
-              // Recent Electricians Section
+              // Popular Services
               SliverToBoxAdapter(
                 child: Padding(
                   padding: const EdgeInsets.all(24.0),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Text(
-                            'Recent Electricians',
-                            style: AppTextStyles.h3,
-                          ),
-                          TextButton(
-                            onPressed: () {
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (context) =>
-                                      const AllElectriciansScreen(),
-                                ),
-                              );
-                            },
-                            child: Text(
-                              'See All',
-                              style: AppTextStyles.link,
-                            ),
-                          ),
-                        ],
+                      Text(
+                        'Popular Services',
+                        style: AppTextStyles.h3,
                       ),
                       const SizedBox(height: 16),
+                      Container(
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: AppColors.surface,
+                          borderRadius: BorderRadius.circular(16),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withOpacity(0.05),
+                              blurRadius: 10,
+                              offset: const Offset(0, 2),
+                            ),
+                          ],
+                        ),
+                        child: Column(
+                          children: [
+                            _buildPopularServiceItem(
+                              'Emergency Electrical Repair',
+                              '24/7 available',
+                              Icons.flash_on,
+                              Colors.amber,
+                            ),
+                            const Divider(height: 24),
+                            _buildPopularServiceItem(
+                              'AC Installation & Repair',
+                              'Beat the heat',
+                              Icons.ac_unit,
+                              Colors.blue,
+                            ),
+                            const Divider(height: 24),
+                            _buildPopularServiceItem(
+                              'Deep House Cleaning',
+                              'Professional cleaning service',
+                              Icons.cleaning_services,
+                              Colors.green,
+                            ),
+                          ],
+                        ),
+                      ),
                     ],
                   ),
                 ),
-              ),
-
-              // Recent Electricians List
-              Consumer<DatabaseProvider>(
-                builder: (context, databaseProvider, child) {
-                  if (databaseProvider.isLoading) {
-                    return const SliverToBoxAdapter(
-                      child: Padding(
-                        padding: EdgeInsets.all(24.0),
-                        child: Center(
-                          child: CircularProgressIndicator(
-                            valueColor:
-                                AlwaysStoppedAnimation<Color>(AppColors.accent),
-                          ),
-                        ),
-                      ),
-                    );
-                  }
-
-                  final electricians = databaseProvider.electricians;
-
-                  if (electricians.isEmpty) {
-                    return const SliverToBoxAdapter(
-                      child: Padding(
-                        padding: EdgeInsets.all(24.0),
-                        child: Center(
-                          child: Text(
-                            'No electricians found',
-                            style: TextStyle(
-                              color: AppColors.textSecondary,
-                              fontSize: 16,
-                            ),
-                          ),
-                        ),
-                      ),
-                    );
-                  }
-
-                  return SliverList(
-                    delegate: SliverChildBuilderDelegate(
-                      (context, index) {
-                        if (index >= electricians.length) return null;
-                        final electrician = electricians[index];
-                        return Padding(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 24.0,
-                            vertical: 8.0,
-                          ),
-                          child: RecentElectricianCard(
-                            name: electrician.profile.name,
-                            rating: electrician.rating,
-                            specialty: electrician.specialties.isNotEmpty
-                                ? electrician.specialties[0]
-                                : 'General Electrician',
-                            jobsCompleted: electrician.jobsCompleted,
-                            isVerified: electrician.isVerified,
-                            id: electrician.id,
-                          ),
-                        );
-                      },
-                      childCount: electricians.length
-                          .clamp(0, 5), // Show max 5 recent electricians
-                    ),
-                  );
-                },
               ),
 
               // Bottom Padding
@@ -307,6 +437,55 @@ class _HomeownerHomeScreenState extends State<HomeownerHomeScreen> {
           ),
         ),
       ),
+    );
+  }
+
+  Widget _buildPopularServiceItem(
+    String title,
+    String subtitle,
+    IconData icon,
+    Color color,
+  ) {
+    return Row(
+      children: [
+        Container(
+          padding: const EdgeInsets.all(8),
+          decoration: BoxDecoration(
+            color: color.withOpacity(0.1),
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: Icon(
+            icon,
+            color: color,
+            size: 24,
+          ),
+        ),
+        const SizedBox(width: 16),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                title,
+                style: AppTextStyles.bodyLarge.copyWith(
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+              Text(
+                subtitle,
+                style: AppTextStyles.bodySmall.copyWith(
+                  color: AppColors.textSecondary,
+                ),
+              ),
+            ],
+          ),
+        ),
+        Icon(
+          Icons.arrow_forward_ios,
+          color: AppColors.textSecondary,
+          size: 16,
+        ),
+      ],
     );
   }
 }
