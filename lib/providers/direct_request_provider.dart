@@ -22,6 +22,18 @@ class DirectRequestProvider extends ChangeNotifier {
       .where((request) => request.status == DirectRequest.STATUS_DECLINED)
       .toList();
 
+  List<DirectRequest> get inProgressRequests => _directRequests
+      .where((request) => request.status == DirectRequest.STATUS_IN_PROGRESS)
+      .toList();
+
+  List<DirectRequest> get completedRequests => _directRequests
+      .where((request) => request.status == DirectRequest.STATUS_COMPLETED)
+      .toList();
+
+  List<DirectRequest> get cancelledRequests => _directRequests
+      .where((request) => request.status == DirectRequest.STATUS_CANCELLED)
+      .toList();
+
   bool get isLoading => _loading;
   String? get error => _error;
 
@@ -250,6 +262,150 @@ class DirectRequestProvider extends ChangeNotifier {
       final response = await _supabase
           .from('direct_requests')
           .update(data)
+          .eq('id', requestId)
+          .select()
+          .single();
+
+      final index = _directRequests.indexWhere((r) => r.id == requestId);
+      if (index != -1) {
+        _directRequests[index] = DirectRequest.fromJson(response);
+      }
+
+      _loading = false;
+      notifyListeners();
+    } catch (e) {
+      _error = e.toString();
+      _loading = false;
+      notifyListeners();
+      rethrow;
+    }
+  }
+
+  Future<void> cancelRequest({
+    required String requestId,
+    required String reason,
+    required bool isCancelledByHomeowner,
+  }) async {
+    try {
+      _loading = true;
+      _error = null;
+      notifyListeners();
+
+      final response = await _supabase
+          .from('direct_requests')
+          .update({
+            'status': DirectRequest.STATUS_CANCELLED,
+            'cancellation_reason': reason,
+            'cancelled_by_homeowner': isCancelledByHomeowner,
+            'updated_at': DateTime.now().toIso8601String(),
+          })
+          .eq('id', requestId)
+          .select()
+          .single();
+
+      final index = _directRequests.indexWhere((r) => r.id == requestId);
+      if (index != -1) {
+        _directRequests[index] = DirectRequest.fromJson(response);
+      }
+
+      _loading = false;
+      notifyListeners();
+    } catch (e) {
+      _error = e.toString();
+      _loading = false;
+      notifyListeners();
+      rethrow;
+    }
+  }
+
+  Future<void> proposeReschedule({
+    required String requestId,
+    required DateTime newDate,
+    required String newTime,
+    required String message,
+  }) async {
+    try {
+      _loading = true;
+      _error = null;
+      notifyListeners();
+
+      final response = await _supabase
+          .from('direct_requests')
+          .update({
+            'status': DirectRequest.STATUS_RESCHEDULED,
+            'alternative_date': newDate.toIso8601String().split('T')[0],
+            'alternative_time': newTime,
+            'alternative_message': message,
+            'updated_at': DateTime.now().toIso8601String(),
+          })
+          .eq('id', requestId)
+          .select()
+          .single();
+
+      final index = _directRequests.indexWhere((r) => r.id == requestId);
+      if (index != -1) {
+        _directRequests[index] = DirectRequest.fromJson(response);
+      }
+
+      _loading = false;
+      notifyListeners();
+    } catch (e) {
+      _error = e.toString();
+      _loading = false;
+      notifyListeners();
+      rethrow;
+    }
+  }
+
+  Future<void> startService({
+    required String requestId,
+  }) async {
+    try {
+      _loading = true;
+      _error = null;
+      notifyListeners();
+
+      final response = await _supabase
+          .from('direct_requests')
+          .update({
+            'status': DirectRequest.STATUS_IN_PROGRESS,
+            'start_time': DateTime.now().toIso8601String(),
+            'updated_at': DateTime.now().toIso8601String(),
+          })
+          .eq('id', requestId)
+          .select()
+          .single();
+
+      final index = _directRequests.indexWhere((r) => r.id == requestId);
+      if (index != -1) {
+        _directRequests[index] = DirectRequest.fromJson(response);
+      }
+
+      _loading = false;
+      notifyListeners();
+    } catch (e) {
+      _error = e.toString();
+      _loading = false;
+      notifyListeners();
+      rethrow;
+    }
+  }
+
+  Future<void> completeService({
+    required String requestId,
+  }) async {
+    try {
+      _loading = true;
+      _error = null;
+      notifyListeners();
+
+      final response = await _supabase
+          .from('direct_requests')
+          .update({
+            'status': DirectRequest.STATUS_COMPLETED,
+            'completion_time': DateTime.now().toIso8601String(),
+            'updated_at': DateTime.now().toIso8601String(),
+          })
           .eq('id', requestId)
           .select()
           .single();
