@@ -1,0 +1,28 @@
+{
+  "" : {
+    "diagnostics" : "/Users/albaraamac/Documents/Documents - albaraa’s MacBook Air/Projects/voltz/ios/build/Runner.build/Debug-iphoneos/Runner.build/Objects-normal/arm64/Runner-master.dia",
+    "emit-module-dependencies" : "/Users/albaraamac/Documents/Documents - albaraa’s MacBook Air/Projects/voltz/ios/build/Runner.build/Debug-iphoneos/Runner.build/Objects-normal/arm64/Runner-master-emit-module.d",
+    "emit-module-diagnostics" : "/Users/albaraamac/Documents/Documents - albaraa’s MacBook Air/Projects/voltz/ios/build/Runner.build/Debug-iphoneos/Runner.build/Objects-normal/arm64/Runner-master-emit-module.dia",
+    "swift-dependencies" : "/Users/albaraamac/Documents/Documents - albaraa’s MacBook Air/Projects/voltz/ios/build/Runner.build/Debug-iphoneos/Runner.build/Objects-normal/arm64/Runner-master.swiftdeps"
+  },
+  "/Users/albaraamac/Documents/Documents - albaraa’s MacBook Air/Projects/voltz/ios/Runner/AppDelegate.swift" : {
+    "const-values" : "/Users/albaraamac/Documents/Documents - albaraa’s MacBook Air/Projects/voltz/ios/build/Runner.build/Debug-iphoneos/Runner.build/Objects-normal/arm64/AppDelegate.swiftconstvalues",
+    "dependencies" : "/Users/albaraamac/Documents/Documents - albaraa’s MacBook Air/Projects/voltz/ios/build/Runner.build/Debug-iphoneos/Runner.build/Objects-normal/arm64/AppDelegate.d",
+    "diagnostics" : "/Users/albaraamac/Documents/Documents - albaraa’s MacBook Air/Projects/voltz/ios/build/Runner.build/Debug-iphoneos/Runner.build/Objects-normal/arm64/AppDelegate.dia",
+    "index-unit-output-path" : "/Runner.build/Debug-iphoneos/Runner.build/Objects-normal/arm64/AppDelegate.o",
+    "llvm-bc" : "/Users/albaraamac/Documents/Documents - albaraa’s MacBook Air/Projects/voltz/ios/build/Runner.build/Debug-iphoneos/Runner.build/Objects-normal/arm64/AppDelegate.bc",
+    "object" : "/Users/albaraamac/Documents/Documents - albaraa’s MacBook Air/Projects/voltz/ios/build/Runner.build/Debug-iphoneos/Runner.build/Objects-normal/arm64/AppDelegate.o",
+    "swift-dependencies" : "/Users/albaraamac/Documents/Documents - albaraa’s MacBook Air/Projects/voltz/ios/build/Runner.build/Debug-iphoneos/Runner.build/Objects-normal/arm64/AppDelegate.swiftdeps",
+    "swiftmodule" : "/Users/albaraamac/Documents/Documents - albaraa’s MacBook Air/Projects/voltz/ios/build/Runner.build/Debug-iphoneos/Runner.build/Objects-normal/arm64/AppDelegate~partial.swiftmodule"
+  },
+  "/Users/albaraamac/Documents/Documents - albaraa’s MacBook Air/Projects/voltz/ios/build/Runner.build/Debug-iphoneos/Runner.build/DerivedSources/GeneratedAssetSymbols.swift" : {
+    "const-values" : "/Users/albaraamac/Documents/Documents - albaraa’s MacBook Air/Projects/voltz/ios/build/Runner.build/Debug-iphoneos/Runner.build/Objects-normal/arm64/GeneratedAssetSymbols.swiftconstvalues",
+    "dependencies" : "/Users/albaraamac/Documents/Documents - albaraa’s MacBook Air/Projects/voltz/ios/build/Runner.build/Debug-iphoneos/Runner.build/Objects-normal/arm64/GeneratedAssetSymbols.d",
+    "diagnostics" : "/Users/albaraamac/Documents/Documents - albaraa’s MacBook Air/Projects/voltz/ios/build/Runner.build/Debug-iphoneos/Runner.build/Objects-normal/arm64/GeneratedAssetSymbols.dia",
+    "index-unit-output-path" : "/Runner.build/Debug-iphoneos/Runner.build/Objects-normal/arm64/GeneratedAssetSymbols.o",
+    "llvm-bc" : "/Users/albaraamac/Documents/Documents - albaraa’s MacBook Air/Projects/voltz/ios/build/Runner.build/Debug-iphoneos/Runner.build/Objects-normal/arm64/GeneratedAssetSymbols.bc",
+    "object" : "/Users/albaraamac/Documents/Documents - albaraa’s MacBook Air/Projects/voltz/ios/build/Runner.build/Debug-iphoneos/Runner.build/Objects-normal/arm64/GeneratedAssetSymbols.o",
+    "swift-dependencies" : "/Users/albaraamac/Documents/Documents - albaraa’s MacBook Air/Projects/voltz/ios/build/Runner.build/Debug-iphoneos/Runner.build/Objects-normal/arm64/GeneratedAssetSymbols.swiftdeps",
+    "swiftmodule" : "/Users/albaraamac/Documents/Documents - albaraa’s MacBook Air/Projects/voltz/ios/build/Runner.build/Debug-iphoneos/Runner.build/Objects-normal/arm64/GeneratedAssetSymbols~partial.swiftmodule"
+  }
+}
