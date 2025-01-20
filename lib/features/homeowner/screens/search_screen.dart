@@ -49,75 +49,74 @@ class _SearchScreenState extends State<SearchScreen> {
                 color: AppColors.surface,
                 boxShadow: [
                   BoxShadow(
-                    color: AppColors.accent.withOpacity(0.05),
+                    color: Colors.black.withOpacity(0.05),
                     blurRadius: 10,
-                    offset: const Offset(0, 4),
+                    offset: const Offset(0, 2),
                   ),
                 ],
               ),
               child: Column(
                 children: [
-                  // Search Bar
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 16),
-                    decoration: BoxDecoration(
-                      color: AppColors.background,
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: AppColors.border),
-                    ),
-                    child: Row(
-                      children: [
-                        const Icon(
-                          Icons.search,
-                          color: AppColors.textSecondary,
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: TextField(
-                            controller: _searchController,
-                            style: AppTextStyles.bodyMedium,
-                            decoration: InputDecoration(
-                              hintText: 'Search electricians...',
-                              hintStyle: AppTextStyles.bodyMedium.copyWith(
-                                color: AppColors.textSecondary,
-                              ),
-                              border: InputBorder.none,
+                  Row(
+                    children: [
+                      Expanded(
+                        child: TextField(
+                          controller: _searchController,
+                          decoration: InputDecoration(
+                            hintText: 'Search electricians...',
+                            hintStyle: AppTextStyles.bodyMedium.copyWith(
+                              color: AppColors.textSecondary,
+                            ),
+                            prefixIcon: const Icon(
+                              Icons.search,
+                              color: AppColors.textSecondary,
+                            ),
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                              borderSide: BorderSide.none,
+                            ),
+                            filled: true,
+                            fillColor: AppColors.background,
+                            contentPadding: const EdgeInsets.symmetric(
+                              horizontal: 16,
+                              vertical: 12,
                             ),
                           ),
                         ),
-                        IconButton(
-                          onPressed: () {
-                            _showFilterBottomSheet(context);
-                          },
-                          icon: const Icon(
-                            Icons.tune,
-                            color: AppColors.accent,
-                          ),
+                      ),
+                      const SizedBox(width: 12),
+                      Container(
+                        decoration: BoxDecoration(
+                          color: AppColors.primary,
+                          borderRadius: BorderRadius.circular(12),
                         ),
-                      ],
-                    ),
+                        child: IconButton(
+                          icon: const Icon(Icons.map_outlined),
+                          color: Colors.white,
+                          onPressed: () {
+                            Navigator.pushNamed(context, '/browse_map');
+                          },
+                        ),
+                      ),
+                    ],
                   ),
                   const SizedBox(height: 16),
                   // Filter Chips
-                  SizedBox(
-                    height: 40,
-                    child: ListView.builder(
-                      scrollDirection: Axis.horizontal,
-                      itemCount: _filters.length,
-                      itemBuilder: (context, index) {
+                  SingleChildScrollView(
+                    scrollDirection: Axis.horizontal,
+                    child: Row(
+                      children: _filters.map((filter) {
                         return Padding(
                           padding: const EdgeInsets.only(right: 8),
                           child: SearchFilterChip(
-                            label: _filters[index],
-                            isSelected: _selectedFilter == _filters[index],
+                            label: filter,
+                            isSelected: _selectedFilter == filter,
                             onTap: () {
-                              setState(() {
-                                _selectedFilter = _filters[index];
-                              });
+                              setState(() => _selectedFilter = filter);
                             },
                           ),
                         );
-                      },
+                      }).toList(),
                     ),
                   ),
                 ],
