@@ -3,6 +3,7 @@ import 'service_model.dart';
 import 'working_hours_model.dart';
 import 'payment_info_model.dart';
 import 'notification_preferences_model.dart';
+import 'location_model.dart';
 
 class Electrician {
   final String id;
@@ -21,6 +22,7 @@ class Electrician {
   final List<WorkingHours> workingHours;
   final PaymentInfo? paymentInfo;
   final NotificationPreferences notificationPreferences;
+  final LocationModel? location;
 
   const Electrician({
     required this.id,
@@ -39,6 +41,7 @@ class Electrician {
     required this.workingHours,
     this.paymentInfo,
     required this.notificationPreferences,
+    this.location,
   });
 
   Map<String, dynamic> toJson() {
@@ -59,6 +62,7 @@ class Electrician {
       'working_hours': workingHours.map((wh) => wh.toJson()).toList(),
       'payment_info': paymentInfo?.toJson(),
       'notification_preferences': notificationPreferences.toJson(),
+      'location': location?.toJson(),
     };
   }
 
@@ -90,6 +94,9 @@ class Electrician {
       notificationPreferences: json['notification_preferences'] != null
           ? NotificationPreferences.fromJson(json['notification_preferences'])
           : NotificationPreferences.defaults(),
+      location: json['location'] != null
+          ? LocationModel.fromJson(json['location'])
+          : null,
     );
   }
 
@@ -110,6 +117,7 @@ class Electrician {
     List<WorkingHours>? workingHours,
     PaymentInfo? paymentInfo,
     NotificationPreferences? notificationPreferences,
+    LocationModel? location,
   }) {
     return Electrician(
       id: id ?? this.id,
@@ -129,6 +137,7 @@ class Electrician {
       paymentInfo: paymentInfo ?? this.paymentInfo,
       notificationPreferences:
           notificationPreferences ?? this.notificationPreferences,
+      location: location ?? this.location,
     );
   }
 
