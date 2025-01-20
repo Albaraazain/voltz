@@ -18,12 +18,12 @@ class _IncomingRequestsScreenState extends State<IncomingRequestsScreen>
     with SingleTickerProviderStateMixin {
   late TabController _tabController;
   bool _isLoading = false;
-  String _selectedFilter = 'all';
+  String _selectedFilter = DirectRequest.STATUS_PENDING;
 
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 3, vsync: this);
+    _tabController = TabController(length: 5, vsync: this);
     _loadRequests();
   }
 
@@ -60,19 +60,61 @@ class _IncomingRequestsScreenState extends State<IncomingRequestsScreen>
     try {
       setState(() => _isLoading = true);
 
-      await context.read<DirectRequestProvider>().updateRequestStatus(
-            requestId: request.id,
-            status: action == 'accept'
-                ? DirectRequest.STATUS_ACCEPTED
-                : DirectRequest.STATUS_DECLINED,
-          );
+      switch (action) {
+        case 'accept':
+          await context.read<DirectRequestProvider>().updateRequestStatus(
+                requestId: request.id,
+                status: DirectRequest.STATUS_ACCEPTED,
+              );
+          break;
+        case 'decline':
+          final reason = await _showDeclineDialog();
+          if (reason != null) {
+            await context.read<DirectRequestProvider>().updateRequestStatus(
+                  requestId: request.id,
+                  status: DirectRequest.STATUS_DECLINED,
+                  declineReason: reason,
+                );
+          }
+          break;
+        case 'reschedule':
+          final result = await _showRescheduleDialog();
+          if (result != null) {
+            await context.read<DirectRequestProvider>().proposeReschedule(
+                  requestId: request.id,
+                  newDate: result['date'],
+                  newTime: result['time'],
+                  message: result['message'],
+                );
+          }
+          break;
+        case 'start':
+          await context.read<DirectRequestProvider>().startService(
+                requestId: request.id,
+              );
+          break;
+        case 'complete':
+          await context.read<DirectRequestProvider>().completeService(
+                requestId: request.id,
+              );
+          break;
+        case 'cancel':
+          final reason = await _showCancelDialog();
+          if (reason != null) {
+            await context.read<DirectRequestProvider>().cancelRequest(
+                  requestId: request.id,
+                  reason: reason,
+                  isCancelledByHomeowner: false,
+                );
+          }
+          break;
+      }
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content:
-                Text('Request ${action == 'accept' ? 'accepted' : 'declined'}'),
-            backgroundColor: action == 'accept' ? Colors.green : Colors.red,
+            content: Text('Request ${_getActionText(action)}'),
+            backgroundColor: _getActionColor(action),
           ),
         );
       }
@@ -89,8 +131,199 @@ class _IncomingRequestsScreenState extends State<IncomingRequestsScreen>
     }
   }
 
+  String _getActionText(String action) {
+    switch (action) {
+      case 'accept':
+        return 'accepted';
+      case 'decline':
+        return 'declined';
+      case 'reschedule':
+        return 'rescheduled';
+      case 'start':
+        return 'started';
+      case 'complete':
+        return 'completed';
+      case 'cancel':
+        return 'cancelled';
+      default:
+        return 'updated';
+    }
+  }
+
+  Color _getActionColor(String action) {
+    switch (action) {
+      case 'accept':
+      case 'complete':
+        return Colors.green;
+      case 'decline':
+      case 'cancel':
+        return Colors.red;
+      case 'reschedule':
+        return Colors.blue;
+      case 'start':
+        return Colors.purple;
+      default:
+        return Colors.grey;
+    }
+  }
+
+  Future<String?> _showDeclineDialog() async {
+    final reasonController = TextEditingController();
+    final result = await showDialog<String?>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Decline Request'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextField(
+              controller: reasonController,
+              decoration: const InputDecoration(
+                labelText: 'Reason for declining',
+                border: OutlineInputBorder(),
+              ),
+              maxLines: 3,
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () =>
+                Navigator.pop(context, reasonController.text.trim()),
+            child: const Text('Decline'),
+          ),
+        ],
+      ),
+    );
+    return result?.isNotEmpty == true ? result : null;
+  }
+
+  Future<String?> _showCancelDialog() async {
+    final reasonController = TextEditingController();
+    final result = await showDialog<String?>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Cancel Request'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Text('Are you sure you want to cancel this request?'),
+            const SizedBox(height: 16),
+            TextField(
+              controller: reasonController,
+              decoration: const InputDecoration(
+                labelText: 'Reason for cancellation',
+                border: OutlineInputBorder(),
+              ),
+              maxLines: 3,
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('No'),
+          ),
+          TextButton(
+            onPressed: () =>
+                Navigator.pop(context, reasonController.text.trim()),
+            child: const Text('Yes'),
+          ),
+        ],
+      ),
+    );
+    return result?.isNotEmpty == true ? result : null;
+  }
+
+  Future<Map<String, dynamic>?> _showRescheduleDialog() async {
+    DateTime selectedDate = DateTime.now();
+    TimeOfDay selectedTime = TimeOfDay.now();
+    final messageController = TextEditingController();
+
+    final result = await showDialog<bool>(
+      context: context,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setState) => AlertDialog(
+          title: const Text('Propose New Time'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              ListTile(
+                title: Text(
+                  'Date: ${selectedDate.toString().split(' ')[0]}',
+                ),
+                trailing: const Icon(Icons.calendar_today),
+                onTap: () async {
+                  final date = await showDatePicker(
+                    context: context,
+                    initialDate: selectedDate,
+                    firstDate: DateTime.now(),
+                    lastDate: DateTime.now().add(const Duration(days: 90)),
+                  );
+                  if (date != null) {
+                    setState(() => selectedDate = date);
+                  }
+                },
+              ),
+              ListTile(
+                title: Text(
+                  'Time: ${selectedTime.format(context)}',
+                ),
+                trailing: const Icon(Icons.access_time),
+                onTap: () async {
+                  final time = await showTimePicker(
+                    context: context,
+                    initialTime: selectedTime,
+                  );
+                  if (time != null) {
+                    setState(() => selectedTime = time);
+                  }
+                },
+              ),
+              const SizedBox(height: 16),
+              TextField(
+                controller: messageController,
+                decoration: const InputDecoration(
+                  labelText: 'Message to homeowner',
+                  border: OutlineInputBorder(),
+                ),
+                maxLines: 3,
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context, false),
+              child: const Text('Cancel'),
+            ),
+            TextButton(
+              onPressed: () => Navigator.pop(context, true),
+              child: const Text('Propose'),
+            ),
+          ],
+        ),
+      ),
+    );
+
+    if (result == true) {
+      return {
+        'date': selectedDate,
+        'time':
+            '${selectedTime.hour.toString().padLeft(2, '0')}:${selectedTime.minute.toString().padLeft(2, '0')}',
+        'message': messageController.text.trim(),
+      };
+    }
+    return null;
+  }
+
   Widget _buildRequestCard(DirectRequest request) {
     final isPending = request.status == DirectRequest.STATUS_PENDING;
+    final isAccepted = request.status == DirectRequest.STATUS_ACCEPTED;
+    final isInProgress = request.status == DirectRequest.STATUS_IN_PROGRESS;
 
     return Card(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
@@ -103,113 +336,155 @@ class _IncomingRequestsScreenState extends State<IncomingRequestsScreen>
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Text(
-                  'Job Request',
-                  style: AppTextStyles.h3,
+                  'Request #${request.id.substring(0, 8)}',
+                  style: AppTextStyles.bodyLarge,
                 ),
                 Container(
                   padding:
                       const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                   decoration: BoxDecoration(
-                    color: request.status == DirectRequest.STATUS_PENDING
-                        ? Colors.orange
-                        : request.status == DirectRequest.STATUS_ACCEPTED
-                            ? Colors.green
-                            : Colors.red,
+                    color: _getStatusColor(request.status).withOpacity(0.1),
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Text(
-                    request.status,
-                    style:
-                        AppTextStyles.bodySmall.copyWith(color: Colors.white),
+                    request.statusText,
+                    style: TextStyle(color: _getStatusColor(request.status)),
                   ),
                 ),
               ],
             ),
-            const SizedBox(height: 16),
-            Text(
-              'Preferred Date: ${request.preferredDate}',
-              style: AppTextStyles.bodyMedium,
-            ),
             const SizedBox(height: 8),
             Text(
-              'Preferred Time: ${request.preferredTime}',
+              'Preferred Date: ${request.formattedPreferredDate}',
               style: AppTextStyles.bodyMedium,
             ),
-            if (isPending) ...[
-              const SizedBox(height: 16),
+            Text(
+              'Preferred Time: ${request.formattedPreferredTime}',
+              style: AppTextStyles.bodyMedium,
+            ),
+            const SizedBox(height: 16),
+            if (isPending)
               Row(
                 mainAxisAlignment: MainAxisAlignment.end,
                 children: [
-                  CustomButton(
+                  TextButton(
                     onPressed: () => _handleRequestAction(request, 'decline'),
-                    text: 'Decline',
-                    type: ButtonType.secondary,
+                    child: const Text('Decline'),
                   ),
-                  const SizedBox(width: 16),
-                  CustomButton(
+                  const SizedBox(width: 8),
+                  TextButton(
+                    onPressed: () =>
+                        _handleRequestAction(request, 'reschedule'),
+                    child: const Text('Propose New Time'),
+                  ),
+                  const SizedBox(width: 8),
+                  ElevatedButton(
                     onPressed: () => _handleRequestAction(request, 'accept'),
-                    text: 'Accept',
-                    type: ButtonType.primary,
+                    child: const Text('Accept'),
                   ),
                 ],
               ),
-            ],
+            if (isAccepted)
+              Row(
+                mainAxisAlignment: MainAxisAlignment.end,
+                children: [
+                  TextButton(
+                    onPressed: () => _handleRequestAction(request, 'cancel'),
+                    child: const Text('Cancel'),
+                  ),
+                  const SizedBox(width: 8),
+                  ElevatedButton(
+                    onPressed: () => _handleRequestAction(request, 'start'),
+                    child: const Text('Start Service'),
+                  ),
+                ],
+              ),
+            if (isInProgress)
+              Row(
+                mainAxisAlignment: MainAxisAlignment.end,
+                children: [
+                  ElevatedButton(
+                    onPressed: () => _handleRequestAction(request, 'complete'),
+                    child: const Text('Complete Service'),
+                  ),
+                ],
+              ),
           ],
         ),
       ),
     );
   }
 
+  Color _getStatusColor(String status) {
+    switch (status) {
+      case DirectRequest.STATUS_PENDING:
+        return Colors.orange;
+      case DirectRequest.STATUS_ACCEPTED:
+        return Colors.green;
+      case DirectRequest.STATUS_DECLINED:
+        return Colors.red;
+      case DirectRequest.STATUS_CANCELLED:
+        return Colors.grey;
+      case DirectRequest.STATUS_RESCHEDULED:
+        return Colors.blue;
+      case DirectRequest.STATUS_IN_PROGRESS:
+        return Colors.purple;
+      case DirectRequest.STATUS_COMPLETED:
+        return Colors.teal;
+      default:
+        return Colors.grey;
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
-    final requests = _selectedFilter == DirectRequest.STATUS_PENDING
-        ? context.watch<DirectRequestProvider>().pendingRequests
-        : _selectedFilter == DirectRequest.STATUS_ACCEPTED
-            ? context.watch<DirectRequestProvider>().acceptedRequests
-            : context.watch<DirectRequestProvider>().declinedRequests;
-
     return Scaffold(
-      backgroundColor: AppColors.background,
       appBar: AppBar(
-        backgroundColor: AppColors.surface,
-        title: Text(
-          'Incoming Requests',
-          style: AppTextStyles.h2,
-        ),
+        title: const Text('Service Requests'),
         bottom: TabBar(
           controller: _tabController,
-          labelStyle: AppTextStyles.bodyMedium,
+          isScrollable: true,
           tabs: const [
             Tab(text: 'Pending'),
             Tab(text: 'Accepted'),
-            Tab(text: 'Declined'),
+            Tab(text: 'In Progress'),
+            Tab(text: 'Completed'),
+            Tab(text: 'Others'),
           ],
-          onTap: (index) {
-            setState(() {
-              _selectedFilter = index == 0
-                  ? DirectRequest.STATUS_PENDING
-                  : index == 1
-                      ? DirectRequest.STATUS_ACCEPTED
-                      : DirectRequest.STATUS_DECLINED;
-            });
-            _loadRequests();
-          },
         ),
       ),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
-          : requests.isEmpty
-              ? Center(
-                  child: Text(
-                    'No requests found',
-                    style: AppTextStyles.bodyMedium,
-                  ),
-                )
-              : ListView.builder(
-                  itemCount: requests.length,
-                  itemBuilder: (context, index) =>
-                      _buildRequestCard(requests[index]),
-                ),
+          : TabBarView(
+              controller: _tabController,
+              children: [
+                _buildRequestsList(
+                    context.watch<DirectRequestProvider>().pendingRequests),
+                _buildRequestsList(
+                    context.watch<DirectRequestProvider>().acceptedRequests),
+                _buildRequestsList(
+                    context.watch<DirectRequestProvider>().inProgressRequests),
+                _buildRequestsList(
+                    context.watch<DirectRequestProvider>().completedRequests),
+                _buildRequestsList([
+                  ...context.watch<DirectRequestProvider>().declinedRequests,
+                  ...context.watch<DirectRequestProvider>().cancelledRequests,
+                ]),
+              ],
+            ),
+    );
+  }
+
+  Widget _buildRequestsList(List<DirectRequest> requests) {
+    if (requests.isEmpty) {
+      return const Center(
+        child: Text('No requests found'),
+      );
+    }
+
+    return ListView.builder(
+      itemCount: requests.length,
+      itemBuilder: (context, index) => _buildRequestCard(requests[index]),
     );
   }
 }
