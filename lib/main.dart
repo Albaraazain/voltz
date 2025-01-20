@@ -13,6 +13,7 @@ import 'providers/electrician_stats_provider.dart';
 import 'providers/availability_provider.dart';
 import 'providers/schedule_provider.dart';
 import 'providers/notification_provider.dart';
+import 'providers/direct_request_provider.dart';
 import 'features/common/screens/splash_screen.dart';
 import 'features/homeowner/screens/homeowner_main_screen.dart';
 import 'features/electrician/screens/electrician_main_screen.dart';
@@ -35,6 +36,9 @@ import 'features/homeowner/screens/notifications_screen.dart' as homeowner;
 import 'features/electrician/screens/notification_settings_screen.dart'
     as electrician;
 import 'features/electrician/screens/recent_jobs_screen.dart';
+import 'features/homeowner/screens/browse_electricians_map_screen.dart';
+import 'features/homeowner/screens/electrician_profile_view_screen.dart';
+import 'features/homeowner/screens/slot_selection_screen.dart';
 
 Future<void> validateDatabaseSchema() async {
   final client = SupabaseConfig.client;
@@ -197,6 +201,12 @@ class MyApp extends StatelessWidget {
             );
           },
         ),
+        ChangeNotifierProvider(
+          create: (_) {
+            LoggerService.info('Initializing DirectRequestProvider');
+            return DirectRequestProvider(SupabaseConfig.client);
+          },
+        ),
       ],
       child: MaterialApp(
         title: 'ElectriConnect',
@@ -272,13 +282,12 @@ class MyApp extends StatelessWidget {
                   job: settings.arguments as Job,
                 ),
               );
-            case '/homeowner/direct-request':
+            case '/direct_request':
               final args = settings.arguments as Map<String, String>;
               return MaterialPageRoute(
                 builder: (_) => DirectRequestScreen(
                   electricianId: args['electricianId']!,
                   electricianName: args['electricianName']!,
-                  jobId: args['jobId']!,
                 ),
               );
             case '/homeowner/my-requests':
@@ -300,37 +309,11 @@ class MyApp extends StatelessWidget {
                   throw ArgumentError(
                       'Missing electricianId in route arguments');
                 }
-                if (!args.containsKey('slot')) {
-                  throw ArgumentError('Missing slot in route arguments');
-                }
-
-                final electricianId = args['electricianId'] as String;
-                LoggerService.debug('Extracted electricianId: $electricianId');
-
-                final slotData = args['slot'];
-                LoggerService.debug('Raw slot data: $slotData');
-
-                if (slotData is! Map<String, dynamic>) {
-                  throw ArgumentError(
-                      'Slot data is not in the correct format. Expected Map<String, dynamic>, got ${slotData.runtimeType}');
-                }
-
-                final slotJson = slotData;
-                LoggerService.debug(
-                    'Converting slot JSON to ScheduleSlot object: $slotJson');
-
-                final slot = ScheduleSlot.fromJson(slotJson);
-                LoggerService.debug(
-                    'Successfully created ScheduleSlot object:\n'
-                    'ID: ${slot.id}\n'
-                    'Date: ${slot.date}\n'
-                    'Time: ${slot.startTime} - ${slot.endTime}\n'
-                    'Status: ${slot.status}');
 
                 return MaterialPageRoute(
                   builder: (_) => BookAppointmentScreen(
-                    electricianId: electricianId,
-                    selectedSlot: slot,
+                    electricianId: args['electricianId'] as String,
+                    selectedSlot: args['slot'],
                   ),
                 );
               } catch (e, stackTrace) {
@@ -378,6 +361,24 @@ class MyApp extends StatelessWidget {
                   ),
                 );
               }
+            case '/select_slot':
+              final args = settings.arguments as Map<String, String>;
+              return MaterialPageRoute(
+                builder: (_) => SlotSelectionScreen(
+                  electricianId: args['electricianId']!,
+                ),
+              );
+            case '/browse_map':
+              return MaterialPageRoute(
+                builder: (_) => const BrowseElectriciansMapScreen(),
+              );
+            case '/electrician_profile':
+              final args = settings.arguments as Map<String, String>;
+              return MaterialPageRoute(
+                builder: (_) => ElectricianProfileViewScreen(
+                  electricianId: args['id']!,
+                ),
+              );
             default:
               LoggerService.warning(
                   'Unknown route requested: ${settings.name}');
