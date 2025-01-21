@@ -2,12 +2,17 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../../core/constants/colors.dart';
 import '../../../core/constants/text_styles.dart';
+import '../../../core/services/logger_service.dart';
+import '../../../models/service_category_model.dart';
+import '../../../providers/auth_provider.dart';
 import '../../../providers/database_provider.dart';
+import '../../../providers/homeowner_provider.dart';
+import '../../../widgets/primary_button.dart';
 import '../widgets/job_status_card.dart';
 import '../widgets/recent_electrician_card.dart';
 import '../../../providers/notification_provider.dart';
 import 'all_electricians_screen.dart';
-import '../../../core/services/logger_service.dart';
+import 'category_services_screen.dart';
 
 class HomeownerHomeScreen extends StatefulWidget {
   const HomeownerHomeScreen({super.key});
@@ -325,8 +330,15 @@ class _HomeownerHomeScreenState extends State<HomeownerHomeScreen> {
                             icon: Icons.electrical_services,
                             color: Colors.blue,
                             onTap: () {
-                              Navigator.pushNamed(
-                                  context, '/browse_electricians');
+                              final category = ServiceCategory.findById(
+                                  'electrical_services');
+                              if (category != null) {
+                                Navigator.pushNamed(
+                                  context,
+                                  '/category_services',
+                                  arguments: category,
+                                );
+                              }
                             },
                           ),
                           _buildServiceCategory(
@@ -334,7 +346,15 @@ class _HomeownerHomeScreenState extends State<HomeownerHomeScreen> {
                             icon: Icons.plumbing,
                             color: Colors.green,
                             onTap: () {
-                              // TODO: Implement plumbing services
+                              final category =
+                                  ServiceCategory.findById('plumbing_services');
+                              if (category != null) {
+                                Navigator.pushNamed(
+                                  context,
+                                  '/category_services',
+                                  arguments: category,
+                                );
+                              }
                             },
                           ),
                           _buildServiceCategory(
@@ -342,7 +362,11 @@ class _HomeownerHomeScreenState extends State<HomeownerHomeScreen> {
                             icon: Icons.ac_unit,
                             color: Colors.orange,
                             onTap: () {
-                              // TODO: Implement HVAC services
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text('HVAC services coming soon!'),
+                                ),
+                              );
                             },
                           ),
                           _buildServiceCategory(
@@ -350,7 +374,12 @@ class _HomeownerHomeScreenState extends State<HomeownerHomeScreen> {
                             icon: Icons.cleaning_services,
                             color: Colors.purple,
                             onTap: () {
-                              // TODO: Implement cleaning services
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content:
+                                      Text('Cleaning services coming soon!'),
+                                ),
+                              );
                             },
                           ),
                           _buildServiceCategory(
@@ -358,7 +387,12 @@ class _HomeownerHomeScreenState extends State<HomeownerHomeScreen> {
                             icon: Icons.format_paint,
                             color: Colors.red,
                             onTap: () {
-                              // TODO: Implement painting services
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content:
+                                      Text('Painting services coming soon!'),
+                                ),
+                              );
                             },
                           ),
                           _buildServiceCategory(
