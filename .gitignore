@@ -32,3 +32,13 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 
+# Supabase configuration
+lib/core/config/supabase_config.dart
+lib/core/config/supabase_dev_config.dart
+lib/core/config/supabase_prod_config.dart
+lib/core/config/supabase_config.example.dart
+lib/core/config/supabase_dev_config.example.dart
+
+# Dart/Flutter specific
+.dart_tool/
+
